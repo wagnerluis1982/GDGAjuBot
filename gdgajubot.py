@@ -11,7 +11,10 @@ from lxml import html
 import requests
 
 # Configuring log
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p'
+    )
 
 # Configuring parameters
 logging.info("Configurando parâmetros")
