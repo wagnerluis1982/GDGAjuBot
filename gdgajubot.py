@@ -4,6 +4,7 @@
 import argparse
 import logging
 import telebot
+import re
 import os
 import collections
 import datetime
@@ -11,7 +12,10 @@ from lxml import html
 import requests
 
 # Configuring log
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p'
+    )
 
 # Configuring parameters
 logging.info("Configurando parâmetros")
@@ -35,9 +39,13 @@ logging.info("Usando telegram_token=%s" % (_config["telegram_token"]))
 logging.info("Usando meetup_key=%s" % (_config["meetup_key"]))
 bot = telebot.TeleBot(_config["telegram_token"])
 
+def find_match(expression, string):
+    match = re.search(expression, string)
+    return match is not None
+
 
 def generate_events():
-    """TESTANDO."""
+    """Obtém eventos do Meetup."""
     default_payload = {'status': 'upcoming'}
     offset = 0
     while True:
@@ -67,8 +75,7 @@ def generate_events():
 def send_welcome(message):
     """Mensagem de apresentação do bot."""
     logging.info("/start")
-    bot.reply_to(message, "Este bot faz buscas no Meetup do GDG Aracaju:" +
-                 "http://meetup.com/GDG-Aracaju")
+    bot.reply_to(message, "Este bot faz buscas no Meetup do %s" % (_config["group_name"]))
 
 
 @bot.message_handler(commands=['events'])
@@ -109,7 +116,7 @@ def packtpub_free_learning(message):
 
 
 @bot.message_handler(func=lambda message:
-                     "RUBY" in message.text.upper().split())
+                     find_match("RUBY", message.text.upper()))
 def love_ruby(message):
     """Easter Egg com o Ruby."""
     username = ''
@@ -117,7 +124,7 @@ def love_ruby(message):
 
 
 @bot.message_handler(func=lambda message:
-                     "JAVA" in message.text.upper().split())
+                     find_match("JAVA", message.text.upper()))
 def memory_java(message):
     """Easter Egg com o Java."""
     bot.send_message(message.chat.id, "Ihh... acabou a RAM")
