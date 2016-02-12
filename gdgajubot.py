@@ -37,7 +37,7 @@ bot = telebot.TeleBot(_config["telegram_token"])
 
 
 def generate_events():
-    """TESTANDO."""
+    """Obtém eventos do Meetup."""
     default_payload = {'status': 'upcoming'}
     offset = 0
     while True:
@@ -67,8 +67,7 @@ def generate_events():
 def send_welcome(message):
     """Mensagem de apresentação do bot."""
     logging.info("/start")
-    bot.reply_to(message, "Este bot faz buscas no Meetup do GDG Aracaju:" +
-                 "http://meetup.com/GDG-Aracaju")
+    bot.reply_to(message, "Este bot faz buscas no Meetup do %s" % (_config["group_name"]))
 
 
 @bot.message_handler(commands=['events'])
