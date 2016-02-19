@@ -10,6 +10,8 @@ import collections
 import datetime
 from lxml import html
 import requests
+from beaker.cache import CacheManager
+from beaker.util import parse_cache_config_options
 
 # Configuring log
 logging.basicConfig(
@@ -17,7 +19,10 @@ logging.basicConfig(
     format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p'
     )
 
-# Configuring parameters
+# Configuring cache
+cache = CacheManager(**parse_cache_config_options({ 'cache.type': 'memory' }))
+
+# Configuring bot parameters
 logging.info("Configurando parâmetros")
 defaults = {
     'telegram_token': '',
@@ -39,9 +44,15 @@ logging.info("Usando telegram_token=%s" % (_config["telegram_token"]))
 logging.info("Usando meetup_key=%s" % (_config["meetup_key"]))
 bot = telebot.TeleBot(_config["telegram_token"])
 
+
 def find_match(expression, string):
     match = re.search(expression, string)
     return match is not None
+
+
+@cache.cache('get_events', expire=600)
+def get_events():
+    return list(generate_events())
 
 
 def generate_events():
@@ -81,9 +92,9 @@ def send_welcome(message):
 @bot.message_handler(commands=['events'])
 def list_upcoming_events(message):
     """Retorna a lista de eventos do Meetup."""
-    logging.info("/events")
+    logging.info("%s: %s" % (message.from_user.username, "/events"))
     try:
-        all_events = list(generate_events())
+        all_events = get_events()
         response = ""
         for event in all_events:
             # convert time returned by Meetup API
@@ -106,6 +117,7 @@ def list_upcoming_events(message):
 @bot.message_handler(commands=['book'])
 def packtpub_free_learning(message):
     """Retorna o livro disponível no free-learning da editora PacktPub."""
+    logging.info("%s: %s" % (message.from_user.username, "/book"))
     r = requests.get("https://www.packtpub.com/packt/offers/free-learning")
     page = html.fromstring(r.content)
     book = page.xpath('//*[@id="deal-of-the-day"]/div/div/div[2]/div[2]/h2')
@@ -119,7 +131,8 @@ def packtpub_free_learning(message):
                      find_match("RUBY", message.text.upper()))
 def love_ruby(message):
     """Easter Egg com o Ruby."""
-    username = ''
+    logging.info("%s: %s" % (message.from_user.username, "ruby"))
+    username = message.from_user.username
     bot.send_message(message.chat.id, username + " ama Ruby <3")
 
 
@@ -127,6 +140,22 @@ def love_ruby(message):
                      find_match("JAVA", message.text.upper()))
 def memory_java(message):
     """Easter Egg com o Java."""
+    logging.info("%s: %s" % (message.from_user.username, "java"))
     bot.send_message(message.chat.id, "Ihh... acabou a RAM")
+
+
+@bot.message_handler(func=lambda message:
+                     find_match("PYTHON", message.text.upper()))
+def memory_java(message):
+    """Easter Egg com o Python."""
+    logging.info("%s: %s" % (message.from_user.username, "python"))
+    bot.send_message(message.chat.id, "import antigravity")
+
+
+@bot.message_handler(commands=['changelog'])
+def changelog(message):
+    logging.info("%s: %s" % (message.from_user.username, "/changelog"))
+    bot.send_message(message.chat.id, "https://github.com/GDGAracaju/GDGAjuBot/blob/master/CHANGELOG.md")
+
 
 bot.polling()
