@@ -82,6 +82,14 @@ def generate_events():
         offset = offset + 1
 
 
+@cache.cache('get_packt_free_book', expire=600)
+def get_packt_free_book():
+    r = requests.get("https://www.packtpub.com/packt/offers/free-learning")
+    page = html.fromstring(r.content)
+    book = page.xpath('//*[@id="deal-of-the-day"]/div/div/div[2]/div[2]/h2')
+    return book[0].text.strip()
+
+
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
     """Mensagem de apresentação do bot."""
@@ -118,13 +126,8 @@ def list_upcoming_events(message):
 def packtpub_free_learning(message):
     """Retorna o livro disponível no free-learning da editora PacktPub."""
     logging.info("%s: %s" % (message.from_user.username, "/book"))
-    r = requests.get("https://www.packtpub.com/packt/offers/free-learning")
-    page = html.fromstring(r.content)
-    book = page.xpath('//*[@id="deal-of-the-day"]/div/div/div[2]/div[2]/h2')
-    # time_left = page.xpath('//*[@id="deal-of-the-day"]/div/div/div[2]/div[1]/span')
-    bot.send_message(message.chat.id, "O livro de hoje é: " +
-                     book[0].text.strip()+"\n"+"acesse:" +
-                     "https://www.packtpub.com/packt/offers/free-learning")
+    book = get_packt_free_book()
+    bot.send_message(message.chat.id, "O livro de hoje é: %s. Acesse: https://www.packtpub.com/packt/offers/free-learning" % book)
 
 
 @bot.message_handler(func=lambda message:
