@@ -161,4 +161,4 @@ def changelog(message):
     bot.send_message(message.chat.id, "https://github.com/GDGAracaju/GDGAjuBot/blob/master/CHANGELOG.md")
 
 
-bot.polling()
+bot.polling(none_stop=True, interval=0, timeout=20)
