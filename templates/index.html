@@ -2,13 +2,44 @@
 <html>
 <head>
     <title>GDG Aracaju Bot Dashboard</title>
+    <!--Import Google Icon Font-->
+    <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.5/css/materialize.min.css">
+
+    <!--Let browser know website is optimized for mobile-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 </head>
 <body>
-    <p>{{ message }}</p>
-    <form action="/restart_bot/" method="POST">
-        <label for="token">Insira o token para reiniciar</label>
-        <input name="token" placeholder="token"></input>
-        <button>Reiniciar</button>
-    </form>
+    <nav class="grey" role="navigation">
+        <div class="nav-wrapper container"><a id="logo-container" href="/" class="brand-logo">GDG Aracaju Bot</a></div>
+    </nav>
+
+    <header></header>
+
+    <main>
+        <div class="container">
+            <div class="row">
+                <div class="col s12 m3 card">
+                    <h4>Restart bot</h4>
+                    {% if message %}
+                            <p class="red white-text center">{{ message }}</p>
+                    {% endif %}
+                    <form action="/restart_bot/" method="POST">
+                        <label for="token">Insira o token para reiniciar</label>
+                        <input name="token" placeholder="token"></input>
+                        <button class="btn-large">Reiniciar</button>
+                    </form>
+                    <p></p>
+                </div>
+            </div>
+        </div>    
+    </main>
+
+    <footer></footer>
+
+    <!-- Compiled and minified JavaScript -->
+    <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.5/js/materialize.min.js"></script>
 </body>
 </html>
