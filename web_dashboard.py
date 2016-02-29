@@ -1,26 +1,41 @@
-from flask import Flask, render_template, redirect, url_for, request
+from os import environ as env
 from subprocess import call
+from flask import Flask, render_template, redirect, url_for, request
+import tailer
 
-DEBUG = True
+DEBUG = env.get("DEBUG", "True")
+RESTART_TOKEN = env.get("RESTART_TOKEN","12345")
+BOT_LOGFILE = env.get("BOT_LOGFILE", 'bot.log')
 
 def supervisorctl(command):
    return call(['supervisorctl', command]) 
+
+def tail_log_file():
+    try:
+        return tailer.tail(open(BOT_LOGFILE), 10)
+    except FileNotFoundError:
+        return ["Arquivo de log não encontrado"]
 
 app = Flask(__name__)
 
 @app.route('/')
 def index():
     message = request.args.get('message', '')
-    return render_template('index.html', message=message)
+    color = request.args.get('color', 'blue lighten-2')
+    log = tail_log_file()
+    return render_template('index.html', message=message, color=color, log=log)
 
 @app.route('/restart_bot/', methods=['POST'])
 def restart_bot():
-    if request.form['token'] == "12345":
-        result = call(['supervisorctl', 'restart gdgajubot'])
-        return redirect(url_for('index', message='Ok'))
-    else:
-        return redirect(url_for('index', message='NotOk'))
+    if request.form['token'] == RESTART_TOKEN:
+        try:
+            result = supervisorctl('restart gdgajubot')
+            if result == 0:
+                return redirect(url_for('index', message='Bot reiniciado'))
+        except Exception as e:
+            pass
+    return redirect(url_for('index', message='Algo deu errado', color='red'))
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=DEBUG)
+    app.run(host='0.0.0.0', debug=(DEBUG=="True"))
