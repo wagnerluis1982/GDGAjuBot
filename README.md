@@ -9,9 +9,13 @@ Bot de Telegram
 
 ## Uso:
 
-- Falar com o @BotFather no Telegram e criar seu bot
-- Inserir o token do seu bot no dicionário defaults
-- Rodar seu código
+- Instalar as dependências
+- Falar com o @BotFather no Telegram e criar seu bot através dos comandos disponíveis nele
+- Inserir o token de uma das formas:
+  - Sobrescrever o dicionário defaults
+  - Passar por parâmetros via --telegram-token, --meetup_key, --group_name
+  - Incluir nas variáveis de ambiente via TELEGRAM_TOKEN, MEETUP_KEY, GROUP_NAME
+- Rodar o código `python gdgajubot.py`
 - Falar com o seu bot no Telegram para testar
 
 ## Dependências no Windows
