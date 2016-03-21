@@ -104,7 +104,7 @@ def list_upcoming_events(message):
     try:
         all_events = get_events()
         response = ""
-        for event in all_events:
+        for event in all_events[:5]:
             # convert time returned by Meetup API
             time = int(event['time'])/1000
             time_obj = datetime.datetime.fromtimestamp(time)
