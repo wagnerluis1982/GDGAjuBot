@@ -1,3 +1,4 @@
+# encoding:utf-8
 from os import environ as env
 from subprocess import call
 from flask import Flask, render_template, redirect, url_for, request
