@@ -41,11 +41,6 @@ logging.info("Usando meetup_key=%s" % (_config["meetup_key"]))
 bot = telebot.TeleBot(_config["telegram_token"])
 
 
-def find_match(expression, string):
-    match = re.search(expression, string)
-    return match is not None
-
-
 @cache.cache('get_events', expire=600)
 def get_events():
     return list(generate_events())
@@ -126,8 +121,13 @@ def packtpub_free_learning(message):
     bot.send_message(message.chat.id, "O livro de hoje é: %s. Acesse: https://www.packtpub.com/packt/offers/free-learning" % book)
 
 
+# Funções de busca usadas nas easter eggs
+find_ruby = re.compile("(?i)RUBY").search
+find_java = re.compile("(?i)JAVA").search
+find_python = re.compile("(?i)PYTHON").search
+
 @bot.message_handler(func=lambda message:
-                     find_match("RUBY", message.text.upper()))
+                     find_ruby(message.text))
 def love_ruby(message):
     """Easter Egg com o Ruby."""
     logging.info("%s: %s" % (message.from_user.username, "ruby"))
@@ -136,7 +136,7 @@ def love_ruby(message):
 
 
 @bot.message_handler(func=lambda message:
-                     find_match("JAVA", message.text.upper()))
+                     find_java(message.text))
 def memory_java(message):
     """Easter Egg com o Java."""
     logging.info("%s: %s" % (message.from_user.username, "java"))
@@ -144,8 +144,8 @@ def memory_java(message):
 
 
 @bot.message_handler(func=lambda message:
-                     find_match("PYTHON", message.text.upper()))
-def memory_java(message):
+                     find_python(message.text))
+def easter_python(message):
     """Easter Egg com o Python."""
     logging.info("%s: %s" % (message.from_user.username, "python"))
     bot.send_message(message.chat.id, "import antigravity")
