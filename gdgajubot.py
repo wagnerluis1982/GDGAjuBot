@@ -6,7 +6,6 @@ import logging
 import telebot
 import re
 import os
-import collections
 import datetime
 from lxml import html
 import requests
@@ -24,11 +23,7 @@ cache = CacheManager(**parse_cache_config_options({ 'cache.type': 'memory' }))
 
 # Configuring bot parameters
 logging.info("Configurando parâmetros")
-defaults = {
-    'telegram_token': '',
-    'meetup_key': '',
-    'group_name': ''
-}
+params = ['telegram_token', 'meetup_key', 'group_name']
 parser = argparse.ArgumentParser(description='Bot do GDG Aracaju')
 parser.add_argument('-t', '--telegram_token', help='Token da API do Telegram')
 parser.add_argument('-m', '--meetup_key', help='Key da API do Meetup')
@@ -36,18 +31,14 @@ parser.add_argument('-g', '--group_name', help='Grupo do Meetup')
 namespace = parser.parse_args()
 command_line_args = {k: v for k, v in vars(namespace).items() if v}
 
-_config = collections.ChainMap(command_line_args, os.environ, defaults)
+_config = {k: command_line_args.get(k, '') or os.environ.get(k.upper(), '')
+           for k in params}
 
 # Starting bot
 logging.info("Iniciando bot")
 logging.info("Usando telegram_token=%s" % (_config["telegram_token"]))
 logging.info("Usando meetup_key=%s" % (_config["meetup_key"]))
 bot = telebot.TeleBot(_config["telegram_token"])
-
-
-def find_match(expression, string):
-    match = re.search(expression, string)
-    return match is not None
 
 
 @cache.cache('get_events', expire=600)
@@ -130,8 +121,13 @@ def packtpub_free_learning(message):
     bot.send_message(message.chat.id, "O livro de hoje é: %s. Acesse: https://www.packtpub.com/packt/offers/free-learning" % book)
 
 
+# Funções de busca usadas nas easter eggs
+find_ruby = re.compile("(?i)RUBY").search
+find_java = re.compile("(?i)JAVA").search
+find_python = re.compile("(?i)PYTHON").search
+
 @bot.message_handler(func=lambda message:
-                     find_match("RUBY", message.text.upper()))
+                     find_ruby(message.text))
 def love_ruby(message):
     """Easter Egg com o Ruby."""
     logging.info("%s: %s" % (message.from_user.username, "ruby"))
@@ -140,7 +136,7 @@ def love_ruby(message):
 
 
 @bot.message_handler(func=lambda message:
-                     find_match("JAVA", message.text.upper()))
+                     find_java(message.text))
 def memory_java(message):
     """Easter Egg com o Java."""
     logging.info("%s: %s" % (message.from_user.username, "java"))
@@ -148,8 +144,8 @@ def memory_java(message):
 
 
 @bot.message_handler(func=lambda message:
-                     find_match("PYTHON", message.text.upper()))
-def memory_java(message):
+                     find_python(message.text))
+def easter_python(message):
     """Easter Egg com o Python."""
     logging.info("%s: %s" % (message.from_user.username, "python"))
     bot.send_message(message.chat.id, "import antigravity")
