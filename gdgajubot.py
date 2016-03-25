@@ -94,7 +94,7 @@ def list_upcoming_events(message):
     logging.info("%s: %s" % (message.from_user.username, "/events"))
     try:
         all_events = get_events()
-        response = ""
+        response = []
         for event in all_events[:5]:
             # convert time returned by Meetup API
             time = int(event['time'])/1000
@@ -104,10 +104,11 @@ def list_upcoming_events(message):
             date_pretty = time_obj.strftime('%d/%m')
 
             event['date_pretty'] = date_pretty
-            response = response + ("%s: %s %s \n" % (event["name"],
-                                                     event["date_pretty"],
-                                                     event["event_url"]))
+            response.append("%s: %s %s" % (event["name"],
+                                           event["date_pretty"],
+                                           event["event_url"]))
 
+        response = '\n'.join(response)
         bot.reply_to(message, response)
     except Exception as e:
         print(e)
