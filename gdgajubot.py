@@ -119,7 +119,7 @@ def packtpub_free_learning(message):
     """Retorna o livro disponível no free-learning da editora PacktPub."""
     logging.info("%s: %s" % (message.from_user.username, "/book"))
     book = get_packt_free_book()
-    bot.send_message(message.chat.id, "O livro de hoje é: %s. Acesse: https://www.packtpub.com/packt/offers/free-learning" % book)
+    bot.send_message(message.chat.id, "[O livro de hoje é: %s](https://www.packtpub.com/packt/offers/free-learning)." % book, parse_mode="Markdown")
 
 
 # Funções de busca usadas nas easter eggs
