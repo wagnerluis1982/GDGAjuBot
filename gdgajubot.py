@@ -80,14 +80,12 @@ def get_packt_free_book():
     return book[0].text.strip()
 
 
-@bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
     """Mensagem de apresentação do bot."""
     logging.info("/start")
     bot.reply_to(message, "Este bot faz buscas no Meetup do %s" % (_config["group_name"]))
 
 
-@bot.message_handler(commands=['events'])
 def list_upcoming_events(message):
     """Retorna a lista de eventos do Meetup."""
     logging.info("%s: %s" % (message.from_user.username, "/events"))
@@ -113,7 +111,6 @@ def list_upcoming_events(message):
         print(e)
 
 
-@bot.message_handler(commands=['book'])
 def packtpub_free_learning(message):
     """Retorna o livro disponível no free-learning da editora PacktPub."""
     logging.info("%s: %s" % (message.from_user.username, "/book"))
@@ -126,8 +123,6 @@ find_ruby = re.compile("(?i)RUBY").search
 find_java = re.compile("(?i)JAVA").search
 find_python = re.compile("(?i)PYTHON").search
 
-@bot.message_handler(func=lambda message:
-                     find_ruby(message.text))
 def love_ruby(message):
     """Easter Egg com o Ruby."""
     logging.info("%s: %s" % (message.from_user.username, "ruby"))
@@ -135,26 +130,45 @@ def love_ruby(message):
     bot.send_message(message.chat.id, username + " ama Ruby <3")
 
 
-@bot.message_handler(func=lambda message:
-                     find_java(message.text))
 def memory_java(message):
     """Easter Egg com o Java."""
     logging.info("%s: %s" % (message.from_user.username, "java"))
     bot.send_message(message.chat.id, "Ihh... acabou a RAM")
 
 
-@bot.message_handler(func=lambda message:
-                     find_python(message.text))
 def easter_python(message):
     """Easter Egg com o Python."""
     logging.info("%s: %s" % (message.from_user.username, "python"))
     bot.send_message(message.chat.id, "import antigravity")
 
 
-@bot.message_handler(commands=['changelog'])
 def changelog(message):
     logging.info("%s: %s" % (message.from_user.username, "/changelog"))
     bot.send_message(message.chat.id, "https://github.com/GDGAracaju/GDGAjuBot/blob/master/CHANGELOG.md")
 
 
+def handle_messages(messages):
+    for message in messages:
+        if message.content_type == "text":
+            # Identifica o comando e despacha para a função correta
+            command = telebot.util.extract_command(message.text)
+            if command in ['start', 'help']:
+                send_welcome(message)
+            elif command == 'events':
+                list_upcoming_events(message)
+            elif command == 'book':
+                packtpub_free_learning(message)
+            elif command == 'changelog':
+                changelog(message)
+
+            # Easter eggs
+            elif find_ruby(message.text):
+                love_ruby(message)
+            elif find_java(message.text):
+                memory_java(message)
+            elif find_python(message.text):
+                easter_python(message)
+
+
+bot.set_update_listener(handle_messages)
 bot.polling(none_stop=True, interval=0, timeout=20)
