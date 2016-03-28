@@ -68,10 +68,15 @@ find_python = re.compile("(?i)PYTHON").search
 
 
 class GDGAjuBot:
+    def __init__(self, bot, config):
+        self.bot = bot
+        self.config = config
+        bot.set_update_listener(self.handle_messages)
+
     def send_welcome(self, message):
         """Mensagem de apresentação do bot."""
         logging.info("/start")
-        bot.reply_to(message, "Este bot faz buscas no Meetup do %s" % (_config["group_name"]))
+        self.bot.reply_to(message, "Este bot faz buscas no Meetup do %s" % (self.config["group_name"]))
 
     def list_upcoming_events(self, message):
         """Retorna a lista de eventos do Meetup."""
@@ -93,7 +98,7 @@ class GDGAjuBot:
                                                event["event_url"]))
 
             response = '\n'.join(response)
-            bot.reply_to(message, response)
+            self.bot.reply_to(message, response)
         except Exception as e:
             print(e)
 
@@ -101,7 +106,7 @@ class GDGAjuBot:
         """Retorna o livro disponível no free-learning da editora PacktPub."""
         logging.info("%s: %s" % (message.from_user.username, "/book"))
         book = get_packt_free_book()
-        bot.send_message(message.chat.id,
+        self.bot.send_message(message.chat.id,
                               "[O livro de hoje é: %s](https://www.packtpub.com/packt/offers/free-learning)." % book,
                               parse_mode="Markdown")
 
@@ -109,21 +114,21 @@ class GDGAjuBot:
         """Easter Egg com o Ruby."""
         logging.info("%s: %s" % (message.from_user.username, "ruby"))
         username = message.from_user.username
-        bot.send_message(message.chat.id, username + " ama Ruby <3")
+        self.bot.send_message(message.chat.id, username + " ama Ruby <3")
 
     def memory_java(self, message):
         """Easter Egg com o Java."""
         logging.info("%s: %s" % (message.from_user.username, "java"))
-        bot.send_message(message.chat.id, "Ihh... acabou a RAM")
+        self.bot.send_message(message.chat.id, "Ihh... acabou a RAM")
 
     def easter_python(self, message):
         """Easter Egg com o Python."""
         logging.info("%s: %s" % (message.from_user.username, "python"))
-        bot.send_message(message.chat.id, "import antigravity")
+        self.bot.send_message(message.chat.id, "import antigravity")
 
     def changelog(self, message):
         logging.info("%s: %s" % (message.from_user.username, "/changelog"))
-        bot.send_message(message.chat.id, "https://github.com/GDGAracaju/GDGAjuBot/blob/master/CHANGELOG.md")
+        self.bot.send_message(message.chat.id, "https://github.com/GDGAracaju/GDGAjuBot/blob/master/CHANGELOG.md")
 
     def handle_messages(self, messages):
         for message in messages:
@@ -147,8 +152,11 @@ class GDGAjuBot:
                 elif find_python(message.text):
                     self.easter_python(message)
 
+    def start(self):
+        self.bot.polling(none_stop=True, interval=0, timeout=20)
 
-if __name__ == "__main__":
+
+def main():
     # Configuring bot parameters
     logging.info("Configurando parâmetros")
     params = ['telegram_token', 'meetup_key', 'group_name']
@@ -159,6 +167,8 @@ if __name__ == "__main__":
     namespace = parser.parse_args()
     command_line_args = {k: v for k, v in vars(namespace).items() if v}
 
+    # Tornado _config global para não afetar as funções do módulo
+    global _config
     _config = {k: command_line_args.get(k, '') or os.environ.get(k.upper(), '')
                for k in params}
 
@@ -166,6 +176,10 @@ if __name__ == "__main__":
     logging.info("Iniciando bot")
     logging.info("Usando telegram_token=%s" % (_config["telegram_token"]))
     logging.info("Usando meetup_key=%s" % (_config["meetup_key"]))
-    bot = telebot.TeleBot(_config["telegram_token"])
-    bot.set_update_listener(GDGAjuBot().handle_messages)
-    bot.polling(none_stop=True, interval=0, timeout=20)
+    bot = telebot.TeleBot(_config['telegram_token'])
+    gdgbot = GDGAjuBot(bot, _config)
+    gdgbot.start()
+
+
+if __name__ == "__main__":
+    main()
