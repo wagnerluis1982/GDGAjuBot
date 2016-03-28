@@ -1,18 +1,6 @@
 language: python
 python:
-    - "3.3"
     - "3.4"
 install: "pip install -r requirements.txt"
-addons:
-    apt:
-        packages:
-            - sshpass
 script:
     - cd tests && py.test
-after_success:
-    - mkdir build
-    - mv * build
-    - tar -czf package.tgz build
-    - export SSHPASS=$DEPLOY_PASS
-    - sshpass -e scp package.tgz $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH
-    - sshpass -e ssh $DEPLOY_USER@$DEPLOY_HOST $DEPLOY_PATH/deploy.sh
