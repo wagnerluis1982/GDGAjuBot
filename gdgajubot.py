@@ -11,12 +11,6 @@ import requests
 from beaker.cache import CacheManager
 from beaker.util import parse_cache_config_options
 
-# Configuring log
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p'
-    )
-
 # Configuring cache
 cache = CacheManager(**parse_cache_config_options({ 'cache.type': 'memory' }))
 
@@ -157,6 +151,12 @@ class GDGAjuBot:
 
 
 def main():
+    # Configuring log
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p'
+    )
+
     # Configuring bot parameters
     logging.info("Configurando parâmetros")
     params = ['telegram_token', 'meetup_key', 'group_name']
