@@ -1,5 +1,7 @@
 # GDG Aracaju Bot
 
+[![Build Status](https://travis-ci.org/GDGAracaju/GDGAjuBot.svg?branch=master)](https://travis-ci.org/GDGAracaju/GDGAjuBot)
+
 Bot de Telegram
 
 ## Dependências:
