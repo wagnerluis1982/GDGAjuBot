@@ -22,18 +22,18 @@ cache = CacheManager(**parse_cache_config_options({ 'cache.type': 'memory' }))
 
 
 @cache.cache('get_events', expire=600)
-def get_events():
-    return list(generate_events())
+def get_events(config):
+    return list(generate_events(config))
 
 
-def generate_events():
+def generate_events(config):
     """Obtém eventos do Meetup."""
     default_payload = {'status': 'upcoming'}
     offset = 0
     while True:
         offset_payload = {'offset': offset,
-                          'key': _config["meetup_key"],
-                          'group_urlname': _config["group_name"]}
+                          'key': config["meetup_key"],
+                          'group_urlname': config["group_name"]}
         payload = default_payload.copy()
         payload.update(offset_payload)
         # Above is the equivalent of jQuery.extend()
@@ -82,7 +82,7 @@ class GDGAjuBot:
         """Retorna a lista de eventos do Meetup."""
         logging.info("%s: %s" % (message.from_user.username, "/events"))
         try:
-            all_events = get_events()
+            all_events = get_events(self.config)
             response = []
             for event in all_events[:5]:
                 # convert time returned by Meetup API
@@ -167,8 +167,6 @@ def main():
     namespace = parser.parse_args()
     command_line_args = {k: v for k, v in vars(namespace).items() if v}
 
-    # Tornado _config global para não afetar as funções do módulo
-    global _config
     _config = {k: command_line_args.get(k, '') or os.environ.get(k.upper(), '')
                for k in params}
 
