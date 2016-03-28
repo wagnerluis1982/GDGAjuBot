@@ -4,11 +4,12 @@ import sys
 sys.path.append('../')
 
 import time
-import pytest
+import unittest
 import os
 import gdgajubot
 
-class TestGDGAjuBot:
+
+class TestGDGAjuBot(unittest.TestCase):
     def test_find_ruby(self):
         assert gdgajubot.find_ruby("Olá ruby GDG")
         assert gdgajubot.find_ruby("Olá RUBY GDG")
