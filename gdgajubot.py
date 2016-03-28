@@ -61,94 +61,91 @@ def get_packt_free_book():
     return book[0].text.strip()
 
 
-def send_welcome(message):
-    """Mensagem de apresentação do bot."""
-    logging.info("/start")
-    bot.reply_to(message, "Este bot faz buscas no Meetup do %s" % (_config["group_name"]))
-
-
-def list_upcoming_events(message):
-    """Retorna a lista de eventos do Meetup."""
-    logging.info("%s: %s" % (message.from_user.username, "/events"))
-    try:
-        all_events = get_events()
-        response = []
-        for event in all_events[:5]:
-            # convert time returned by Meetup API
-            time = int(event['time'])/1000
-            time_obj = datetime.datetime.fromtimestamp(time)
-
-            # create a pretty-looking date
-            date_pretty = time_obj.strftime('%d/%m')
-
-            event['date_pretty'] = date_pretty
-            response.append("%s: %s %s" % (event["name"],
-                                           event["date_pretty"],
-                                           event["event_url"]))
-
-        response = '\n'.join(response)
-        bot.reply_to(message, response)
-    except Exception as e:
-        print(e)
-
-
-def packtpub_free_learning(message):
-    """Retorna o livro disponível no free-learning da editora PacktPub."""
-    logging.info("%s: %s" % (message.from_user.username, "/book"))
-    book = get_packt_free_book()
-    bot.send_message(message.chat.id, "[O livro de hoje é: %s](https://www.packtpub.com/packt/offers/free-learning)." % book, parse_mode="Markdown")
-
-
 # Funções de busca usadas nas easter eggs
 find_ruby = re.compile("(?i)RUBY").search
 find_java = re.compile("(?i)JAVA").search
 find_python = re.compile("(?i)PYTHON").search
 
-def love_ruby(message):
-    """Easter Egg com o Ruby."""
-    logging.info("%s: %s" % (message.from_user.username, "ruby"))
-    username = message.from_user.username
-    bot.send_message(message.chat.id, username + " ama Ruby <3")
 
+class GDGAjuBot:
+    def send_welcome(self, message):
+        """Mensagem de apresentação do bot."""
+        logging.info("/start")
+        bot.reply_to(message, "Este bot faz buscas no Meetup do %s" % (_config["group_name"]))
 
-def memory_java(message):
-    """Easter Egg com o Java."""
-    logging.info("%s: %s" % (message.from_user.username, "java"))
-    bot.send_message(message.chat.id, "Ihh... acabou a RAM")
+    def list_upcoming_events(self, message):
+        """Retorna a lista de eventos do Meetup."""
+        logging.info("%s: %s" % (message.from_user.username, "/events"))
+        try:
+            all_events = get_events()
+            response = []
+            for event in all_events[:5]:
+                # convert time returned by Meetup API
+                time = int(event['time'])/1000
+                time_obj = datetime.datetime.fromtimestamp(time)
 
+                # create a pretty-looking date
+                date_pretty = time_obj.strftime('%d/%m')
 
-def easter_python(message):
-    """Easter Egg com o Python."""
-    logging.info("%s: %s" % (message.from_user.username, "python"))
-    bot.send_message(message.chat.id, "import antigravity")
+                event['date_pretty'] = date_pretty
+                response.append("%s: %s %s" % (event["name"],
+                                               event["date_pretty"],
+                                               event["event_url"]))
 
+            response = '\n'.join(response)
+            bot.reply_to(message, response)
+        except Exception as e:
+            print(e)
 
-def changelog(message):
-    logging.info("%s: %s" % (message.from_user.username, "/changelog"))
-    bot.send_message(message.chat.id, "https://github.com/GDGAracaju/GDGAjuBot/blob/master/CHANGELOG.md")
+    def packtpub_free_learning(self, message):
+        """Retorna o livro disponível no free-learning da editora PacktPub."""
+        logging.info("%s: %s" % (message.from_user.username, "/book"))
+        book = get_packt_free_book()
+        bot.send_message(message.chat.id,
+                              "[O livro de hoje é: %s](https://www.packtpub.com/packt/offers/free-learning)." % book,
+                              parse_mode="Markdown")
 
+    def love_ruby(self, message):
+        """Easter Egg com o Ruby."""
+        logging.info("%s: %s" % (message.from_user.username, "ruby"))
+        username = message.from_user.username
+        bot.send_message(message.chat.id, username + " ama Ruby <3")
 
-def handle_messages(messages):
-    for message in messages:
-        if message.content_type == "text":
-            # Identifica o comando e despacha para a função correta
-            command = telebot.util.extract_command(message.text)
-            if command in ['start', 'help']:
-                send_welcome(message)
-            elif command == 'events':
-                list_upcoming_events(message)
-            elif command == 'book':
-                packtpub_free_learning(message)
-            elif command == 'changelog':
-                changelog(message)
+    def memory_java(self, message):
+        """Easter Egg com o Java."""
+        logging.info("%s: %s" % (message.from_user.username, "java"))
+        bot.send_message(message.chat.id, "Ihh... acabou a RAM")
 
-            # Easter eggs
-            elif find_ruby(message.text):
-                love_ruby(message)
-            elif find_java(message.text):
-                memory_java(message)
-            elif find_python(message.text):
-                easter_python(message)
+    def easter_python(self, message):
+        """Easter Egg com o Python."""
+        logging.info("%s: %s" % (message.from_user.username, "python"))
+        bot.send_message(message.chat.id, "import antigravity")
+
+    def changelog(self, message):
+        logging.info("%s: %s" % (message.from_user.username, "/changelog"))
+        bot.send_message(message.chat.id, "https://github.com/GDGAracaju/GDGAjuBot/blob/master/CHANGELOG.md")
+
+    def handle_messages(self, messages):
+        for message in messages:
+            if message.content_type == "text":
+                # Identifica o comando e despacha para a função correta
+                command = telebot.util.extract_command(message.text)
+                if command in ['start', 'help']:
+                    self.send_welcome(message)
+                elif command == 'events':
+                    self.list_upcoming_events(message)
+                elif command == 'book':
+                    self.packtpub_free_learning(message)
+                elif command == 'changelog':
+                    self.changelog(message)
+
+                # Easter eggs
+                elif find_ruby(message.text):
+                    self.love_ruby(message)
+                elif find_java(message.text):
+                    self.memory_java(message)
+                elif find_python(message.text):
+                    self.easter_python(message)
 
 
 if __name__ == "__main__":
@@ -170,5 +167,5 @@ if __name__ == "__main__":
     logging.info("Usando telegram_token=%s" % (_config["telegram_token"]))
     logging.info("Usando meetup_key=%s" % (_config["meetup_key"]))
     bot = telebot.TeleBot(_config["telegram_token"])
-    bot.set_update_listener(handle_messages)
+    bot.set_update_listener(GDGAjuBot().handle_messages)
     bot.polling(none_stop=True, interval=0, timeout=20)
