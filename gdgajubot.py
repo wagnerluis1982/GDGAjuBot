@@ -20,25 +20,6 @@ logging.basicConfig(
 # Configuring cache
 cache = CacheManager(**parse_cache_config_options({ 'cache.type': 'memory' }))
 
-# Configuring bot parameters
-logging.info("Configurando parâmetros")
-params = ['telegram_token', 'meetup_key', 'group_name']
-parser = argparse.ArgumentParser(description='Bot do GDG Aracaju')
-parser.add_argument('-t', '--telegram_token', help='Token da API do Telegram')
-parser.add_argument('-m', '--meetup_key', help='Key da API do Meetup')
-parser.add_argument('-g', '--group_name', help='Grupo do Meetup')
-namespace = parser.parse_args()
-command_line_args = {k: v for k, v in vars(namespace).items() if v}
-
-_config = {k: command_line_args.get(k, '') or os.environ.get(k.upper(), '')
-           for k in params}
-
-# Starting bot
-logging.info("Iniciando bot")
-logging.info("Usando telegram_token=%s" % (_config["telegram_token"]))
-logging.info("Usando meetup_key=%s" % (_config["meetup_key"]))
-bot = telebot.TeleBot(_config["telegram_token"])
-
 
 @cache.cache('get_events', expire=600)
 def get_events():
@@ -170,5 +151,24 @@ def handle_messages(messages):
                 easter_python(message)
 
 
-bot.set_update_listener(handle_messages)
-bot.polling(none_stop=True, interval=0, timeout=20)
+if __name__ == "__main__":
+    # Configuring bot parameters
+    logging.info("Configurando parâmetros")
+    params = ['telegram_token', 'meetup_key', 'group_name']
+    parser = argparse.ArgumentParser(description='Bot do GDG Aracaju')
+    parser.add_argument('-t', '--telegram_token', help='Token da API do Telegram')
+    parser.add_argument('-m', '--meetup_key', help='Key da API do Meetup')
+    parser.add_argument('-g', '--group_name', help='Grupo do Meetup')
+    namespace = parser.parse_args()
+    command_line_args = {k: v for k, v in vars(namespace).items() if v}
+
+    _config = {k: command_line_args.get(k, '') or os.environ.get(k.upper(), '')
+               for k in params}
+
+    # Starting bot
+    logging.info("Iniciando bot")
+    logging.info("Usando telegram_token=%s" % (_config["telegram_token"]))
+    logging.info("Usando meetup_key=%s" % (_config["meetup_key"]))
+    bot = telebot.TeleBot(_config["telegram_token"])
+    bot.set_update_listener(handle_messages)
+    bot.polling(none_stop=True, interval=0, timeout=20)
