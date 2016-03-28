@@ -9,6 +9,30 @@ import os
 import gdgajubot
 
 
+class MockTeleBot:
+    calls = []
+
+    # Registra cada método chamado da classe
+    def __getattr__(self, item):
+        def _call(*args, **kwargs):
+            self.calls.append((item, args, kwargs))
+        return _call
+
+
+class MockMessage:
+    # Método definido para não ter AttributeError
+    def __getattribute__(self, item):
+        pass
+
+
+class MockResources:
+    def get_events(self):
+        pass
+
+    def get_packt_free_book(self):
+        pass
+
+
 class TestGDGAjuBot(unittest.TestCase):
     def test_find_ruby(self):
         assert gdgajubot.find_ruby("Olá ruby GDG")
@@ -27,3 +51,14 @@ class TestGDGAjuBot(unittest.TestCase):
         assert gdgajubot.find_python("Olá Python GDG")
         assert gdgajubot.find_python("Olá PYTHON GDG")
         assert not gdgajubot.find_python("OlápythonGDG")
+
+    def test_send_welcome(self):
+        bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
+        config = {'group_name': 'Test-Bot'}
+        g_bot = gdgajubot.GDGAjuBot(bot, resources, config)
+        g_bot.send_welcome(message)
+        self.assertEqual(bot.calls[-1], (
+            "reply_to",
+            (message, "Este bot faz buscas no Meetup do Test-Bot"),
+            {},
+        ))
