@@ -58,9 +58,9 @@ class Resources:
 
 
 # Funções de busca usadas nas easter eggs
-find_ruby = re.compile("(?i)RUBY").search
-find_java = re.compile("(?i)JAVA").search
-find_python = re.compile("(?i)PYTHON").search
+find_ruby = re.compile(r"(?i)\bRUBY\b").search
+find_java = re.compile(r"(?i)\bJAVA\b").search
+find_python = re.compile(r"(?i)\bPYTHON\b").search
 
 
 class GDGAjuBot:
