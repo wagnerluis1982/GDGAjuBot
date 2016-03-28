@@ -11,48 +11,50 @@ import requests
 from beaker.cache import CacheManager
 from beaker.util import parse_cache_config_options
 
-# Configuring cache
-cache = CacheManager(**parse_cache_config_options({ 'cache.type': 'memory' }))
 
+class Resources:
+    # Configuring cache
+    cache = CacheManager(**parse_cache_config_options({'cache.type': 'memory'}))
 
-@cache.cache('get_events', expire=600)
-def get_events(config):
-    return list(generate_events(config))
+    def __init__(self, config):
+        self.config = config
 
+    @cache.cache('get_events', expire=600)
+    def get_events(self):
+        return list(self.generate_events())
 
-def generate_events(config):
-    """Obtém eventos do Meetup."""
-    default_payload = {'status': 'upcoming'}
-    offset = 0
-    while True:
-        offset_payload = {'offset': offset,
-                          'key': config["meetup_key"],
-                          'group_urlname': config["group_name"]}
-        payload = default_payload.copy()
-        payload.update(offset_payload)
-        # Above is the equivalent of jQuery.extend()
-        # for Python 3.5: payload = {**default_payload, **offset_payload}
+    def generate_events(self):
+        """Obtém eventos do Meetup."""
+        default_payload = {'status': 'upcoming'}
+        offset = 0
+        while True:
+            offset_payload = {'offset': offset,
+                              'key': self.config["meetup_key"],
+                              'group_urlname': self.config["group_name"]}
+            payload = default_payload.copy()
+            payload.update(offset_payload)
+            # Above is the equivalent of jQuery.extend()
+            # for Python 3.5: payload = {**default_payload, **offset_payload}
 
-        r = requests.get('https://api.meetup.com/2/events', params=payload)
-        json = r.json()
+            r = requests.get('https://api.meetup.com/2/events', params=payload)
+            json = r.json()
 
-        results, meta = json['results'], json['meta']
-        for item in results:
-            yield item
+            results, meta = json['results'], json['meta']
+            for item in results:
+                yield item
 
-        # if we no longer have more results pages, stop…
-        if not meta['next']:
-            return
+            # if we no longer have more results pages, stop…
+            if not meta['next']:
+                return
 
-        offset = offset + 1
+            offset = offset + 1
 
-
-@cache.cache('get_packt_free_book', expire=600)
-def get_packt_free_book():
-    r = requests.get("https://www.packtpub.com/packt/offers/free-learning")
-    page = html.fromstring(r.content)
-    book = page.xpath('//*[@id="deal-of-the-day"]/div/div/div[2]/div[2]/h2')
-    return book[0].text.strip()
+    @cache.cache('get_packt_free_book', expire=600)
+    def get_packt_free_book(self):
+        r = requests.get("https://www.packtpub.com/packt/offers/free-learning")
+        page = html.fromstring(r.content)
+        book = page.xpath('//*[@id="deal-of-the-day"]/div/div/div[2]/div[2]/h2')
+        return book[0].text.strip()
 
 
 # Funções de busca usadas nas easter eggs
@@ -62,8 +64,9 @@ find_python = re.compile("(?i)PYTHON").search
 
 
 class GDGAjuBot:
-    def __init__(self, bot, config):
+    def __init__(self, bot, resources, config):
         self.bot = bot
+        self.resources = resources
         self.config = config
         bot.set_update_listener(self.handle_messages)
 
@@ -76,7 +79,7 @@ class GDGAjuBot:
         """Retorna a lista de eventos do Meetup."""
         logging.info("%s: %s" % (message.from_user.username, "/events"))
         try:
-            all_events = get_events(self.config)
+            all_events = self.resources.get_events()
             response = []
             for event in all_events[:5]:
                 # convert time returned by Meetup API
@@ -99,7 +102,7 @@ class GDGAjuBot:
     def packtpub_free_learning(self, message):
         """Retorna o livro disponível no free-learning da editora PacktPub."""
         logging.info("%s: %s" % (message.from_user.username, "/book"))
-        book = get_packt_free_book()
+        book = self.resources.get_packt_free_book()
         self.bot.send_message(message.chat.id,
                               "[O livro de hoje é: %s](https://www.packtpub.com/packt/offers/free-learning)." % book,
                               parse_mode="Markdown")
@@ -173,7 +176,8 @@ def main():
     logging.info("Usando telegram_token=%s" % (_config["telegram_token"]))
     logging.info("Usando meetup_key=%s" % (_config["meetup_key"]))
     bot = telebot.TeleBot(_config['telegram_token'])
-    gdgbot = GDGAjuBot(bot, _config)
+    resources = Resources(_config)
+    gdgbot = GDGAjuBot(bot, resources, _config)
     gdgbot.start()
 
 
