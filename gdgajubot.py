@@ -159,16 +159,14 @@ def main():
 
     # Configuring bot parameters
     logging.info("Configurando parâmetros")
-    params = ['telegram_token', 'meetup_key', 'group_name']
     parser = argparse.ArgumentParser(description='Bot do GDG Aracaju')
     parser.add_argument('-t', '--telegram_token', help='Token da API do Telegram')
     parser.add_argument('-m', '--meetup_key', help='Key da API do Meetup')
     parser.add_argument('-g', '--group_name', help='Grupo do Meetup')
     namespace = parser.parse_args()
-    command_line_args = {k: v for k, v in vars(namespace).items() if v}
 
-    _config = {k: command_line_args.get(k, '') or os.environ.get(k.upper(), '')
-               for k in params}
+    _config = {k: v or os.environ.get(k.upper(), '')
+               for k, v in vars(namespace).items()}
 
     # Starting bot
     logging.info("Iniciando bot")
