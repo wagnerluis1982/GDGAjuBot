@@ -68,7 +68,7 @@ class MockResources:
         ]
 
     def get_packt_free_book(self):
-        pass
+        return "Android 2099"
 
 
 class TestGDGAjuBot(unittest.TestCase):
@@ -109,3 +109,11 @@ class TestGDGAjuBot(unittest.TestCase):
              "Android Jam 2: #Curso Dia 2: 09/04 http://www.meetup.com/GDG-Aracaju/events/229770309/")
         self.assertEqual(bot.calls[-1],
                          CALL.reply_to(message, r, disable_web_page_preview=True))
+
+    def test_packtpub_free_learning(self):
+        bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
+        g_bot = gdgajubot.GDGAjuBot(bot, resources, {})
+        g_bot.packtpub_free_learning(message)
+        r = "O livro de hoje é: [Android 2099](https://www.packtpub.com/packt/offers/free-learning)"
+        self.assertEqual(bot.calls[-1],
+                         CALL.reply_to(message, r, parse_mode="Markdown", disable_web_page_preview=True))
