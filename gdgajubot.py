@@ -95,7 +95,7 @@ class GDGAjuBot:
                                                event["event_url"]))
 
             response = '\n'.join(response)
-            self.bot.reply_to(message, response)
+            self.bot.reply_to(message, response, disable_web_page_preview=True)
         except Exception as e:
             print(e)
 
@@ -105,7 +105,7 @@ class GDGAjuBot:
         book = self.resources.get_packt_free_book()
         self.bot.send_message(message.chat.id,
                               "O livro de hoje é: [%s](https://www.packtpub.com/packt/offers/free-learning)" % book,
-                              parse_mode="Markdown")
+                              parse_mode="Markdown", disable_web_page_preview=True)
 
     def love_ruby(self, message):
         """Easter Egg com o Ruby."""
