@@ -9,13 +9,26 @@ import os
 import gdgajubot
 
 
+class MetaCall:
+    def __call__(self, item, *args, **kwargs):
+        return item, args, kwargs
+
+    def __getattr__(self, item):
+        def _call(*args, **kwargs):
+            return self(item, args, kwargs)
+        return _call
+
+# Usado nos testes para identificar o método chamado (nome e argumentos)
+CALL = MetaCall()
+
+
 class MockTeleBot:
     calls = []
 
     # Registra cada método chamado da classe
     def __getattr__(self, item):
         def _call(*args, **kwargs):
-            self.calls.append((item, args, kwargs))
+            self.calls.append(CALL(item, *args, **kwargs))
         return _call
 
 
@@ -57,8 +70,5 @@ class TestGDGAjuBot(unittest.TestCase):
         config = {'group_name': 'Test-Bot'}
         g_bot = gdgajubot.GDGAjuBot(bot, resources, config)
         g_bot.send_welcome(message)
-        self.assertEqual(bot.calls[-1], (
-            "reply_to",
-            (message, "Este bot faz buscas no Meetup do Test-Bot"),
-            {},
-        ))
+        self.assertEqual(bot.calls[-1],
+                         CALL.reply_to(message, "Este bot faz buscas no Meetup do Test-Bot"))
