@@ -84,7 +84,9 @@ class GDGAjuBot:
             for event in all_events[:5]:
                 # convert time returned by Meetup API
                 time = int(event['time'])/1000
-                time_obj = datetime.datetime.fromtimestamp(time)
+                time_obj = datetime.datetime.utcfromtimestamp(time)
+                # adjust time to UTC-3
+                time_obj -= datetime.timedelta(hours=3)
 
                 # create a pretty-looking date
                 date_pretty = time_obj.strftime('%d/%m')
