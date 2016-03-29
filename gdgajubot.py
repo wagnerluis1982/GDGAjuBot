@@ -104,7 +104,7 @@ class GDGAjuBot:
         logging.info("%s: %s" % (message.from_user.username, "/book"))
         book = self.resources.get_packt_free_book()
         self.bot.send_message(message.chat.id,
-                              "[O livro de hoje é: %s](https://www.packtpub.com/packt/offers/free-learning)." % book,
+                              "O livro de hoje é: [%s](https://www.packtpub.com/packt/offers/free-learning)" % book,
                               parse_mode="Markdown")
 
     def love_ruby(self, message):
