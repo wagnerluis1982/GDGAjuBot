@@ -15,7 +15,7 @@ class MetaCall:
 
     def __getattr__(self, item):
         def _call(*args, **kwargs):
-            return self(item, args, kwargs)
+            return self(item, *args, **kwargs)
         return _call
 
 # Usado nos testes para identificar o método chamado (nome e argumentos)
