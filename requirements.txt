@@ -6,7 +6,7 @@ pytest==2.8.5
 requests==2.5.3
 six==1.10.0
 wheel==0.26.0
-lxml==3.5.0
+beautifulsoup4==4.4.1
 Flask==0.10.1
 tailer==0.4.1
 gunicorn==19.4.5

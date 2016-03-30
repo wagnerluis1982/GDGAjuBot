@@ -10,7 +10,7 @@ import requests
 import telebot
 from beaker.cache import CacheManager
 from beaker.util import parse_cache_config_options
-from lxml import html
+from bs4 import BeautifulSoup
 
 
 class Resources:
@@ -53,9 +53,9 @@ class Resources:
     @cache.cache('get_packt_free_book', expire=600)
     def get_packt_free_book(self):
         r = requests.get("https://www.packtpub.com/packt/offers/free-learning")
-        page = html.fromstring(r.content)
-        book = page.xpath('//*[@id="deal-of-the-day"]/div/div/div[2]/div[2]/h2')
-        return book[0].text.strip()
+        page = BeautifulSoup(r.content, 'html.parser')
+        book = page.select_one('#deal-of-the-day div div div:nth-of-type(2) div:nth-of-type(2) h2')
+        return book.text.strip()
 
 
 # Funções de busca usadas nas easter eggs
