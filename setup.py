@@ -15,7 +15,7 @@ setup(
     scripts = ['scripts/gdgajubot'],
     install_requires=[
         "Beaker==1.8.0",
-        "lxml==3.5.0",
+        "beautifulsoup4==4.4.1",
         "pyTelegramBotAPI==1.4.1",
         "requests==2.5.3",
         "Flask==0.10.1",

@@ -1,12 +1,11 @@
-Beaker==1.8.0
+# install setup.py requirements
+-e .
+# install development requirements
 MarkupSafe==0.23
 py==1.4.31
-pyTelegramBotAPI==1.4.1
 pytest==2.8.5
-requests==2.5.3
 six==1.10.0
 wheel==0.26.0
-lxml==3.5.0
 Flask==0.10.1
 tailer==0.4.1
 gunicorn==19.4.5
