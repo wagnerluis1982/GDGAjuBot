@@ -117,3 +117,12 @@ class TestGDGAjuBot(unittest.TestCase):
         r = "O livro de hoje é: [Android 2099](https://www.packtpub.com/packt/offers/free-learning)"
         self.assertEqual(bot.calls[-1],
                          CALL.reply_to(message, r, parse_mode="Markdown", disable_web_page_preview=True))
+
+
+class TestResources(unittest.TestCase):
+    cd = os.path.dirname(__file__)
+
+    def test_extract_packt_free_book(self):
+        content = open(os.path.join(self.cd, 'packtpub-free-learning.html'))
+        self.assertEqual(gdgajubot.Resources.extract_packt_free_book(content),
+                         "Oracle Enterprise Manager 12c Administration Cookbook")

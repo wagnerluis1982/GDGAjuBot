@@ -53,7 +53,11 @@ class Resources:
     @cache.cache('get_packt_free_book', expire=600)
     def get_packt_free_book(self):
         r = requests.get("https://www.packtpub.com/packt/offers/free-learning")
-        page = BeautifulSoup(r.content, 'html.parser')
+        return self.extract_packt_free_book(r.content)
+
+    @staticmethod
+    def extract_packt_free_book(content):
+        page = BeautifulSoup(content, 'html.parser')
         book = page.select_one('#deal-of-the-day div div div:nth-of-type(2) div:nth-of-type(2) h2')
         return book.text.strip()
 
