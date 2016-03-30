@@ -2,14 +2,15 @@
 """Bot do GDG-Aracaju."""
 import argparse
 import logging
-import telebot
 import re
 import os
 import datetime
-from lxml import html
+
 import requests
+import telebot
 from beaker.cache import CacheManager
 from beaker.util import parse_cache_config_options
+from lxml import html
 
 
 class Resources:
