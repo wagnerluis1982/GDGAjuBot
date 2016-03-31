@@ -89,7 +89,7 @@ class GDGAjuBot:
             self.bot.reply_to(message, '\n'.join(response),
                               parse_mode="Markdown", disable_web_page_preview=True)
         except Exception as e:
-            print(e)
+            logging.exception(e)
 
     def packtpub_free_learning(self, message):
         """Retorna o livro disponível no free-learning da editora PacktPub."""
