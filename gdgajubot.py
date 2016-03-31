@@ -87,12 +87,11 @@ class GDGAjuBot:
                 date_pretty = time_obj.strftime('%d/%m')
 
                 event['date_pretty'] = date_pretty
-                response.append("%s: %s %s" % (event["name"],
-                                               event["date_pretty"],
-                                               event["link"]))
+                response.append("[%(name)s](%(link)s): %(date_pretty)s" % event)
 
             response = '\n'.join(response)
-            self.bot.reply_to(message, response, disable_web_page_preview=True)
+            self.bot.reply_to(message, response,
+                              parse_mode="Markdown", disable_web_page_preview=True)
         except Exception as e:
             print(e)
 
