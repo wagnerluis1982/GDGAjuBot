@@ -56,15 +56,6 @@ class MockResources:
             {'event_url': 'http://www.meetup.com/GDG-Aracaju/events/229770309/',
              'name': 'Android Jam 2: #Curso Dia 2',
              'time': 1460217600000},
-            {'event_url': 'http://www.meetup.com/GDG-Aracaju/events/mwnsrlyvhbgb/',
-             'name': 'Coding Dojo',
-             'time': 1462399200000},
-            {'event_url': 'http://www.meetup.com/GDG-Aracaju/events/229951204/',
-             'name': 'Google I/O Extended',
-             'time': 1463587200000},
-            {'event_url': 'http://www.meetup.com/GDG-Aracaju/events/229951264/',
-             'name': 'Google IO Extended 2016',
-             'time': 1463608800000},
         ]
 
     def get_packt_free_book(self):
