@@ -26,29 +26,18 @@ class Resources:
 
     def generate_events(self):
         """Obtém eventos do Meetup."""
-        default_payload = {'status': 'upcoming'}
-        offset = 0
-        while True:
-            offset_payload = {'offset': offset,
-                              'key': self.config["meetup_key"],
-                              'group_urlname': self.config["group_name"]}
-            payload = default_payload.copy()
-            payload.update(offset_payload)
-            # Above is the equivalent of jQuery.extend()
-            # for Python 3.5: payload = {**default_payload, **offset_payload}
+        # api v3 base url
+        url = "https://api.meetup.com/%(group_name)s/events" % self.config
 
-            r = requests.get('https://api.meetup.com/2/events', params=payload)
-            json = r.json()
+        # response for the events
+        r = requests.get(url, params={
+            'key': self.config['meetup_key'],
+            'status': 'upcoming',
+            'only': 'name,time,link',  # filter response to these fields
+            'page': 5,                 # limit to 5 events
+        })
 
-            results, meta = json['results'], json['meta']
-            for item in results:
-                yield item
-
-            # if we no longer have more results pages, stop…
-            if not meta['next']:
-                return
-
-            offset = offset + 1
+        return r.json()
 
     @cache.cache('get_packt_free_book', expire=600)
     def get_packt_free_book(self):
@@ -99,7 +88,7 @@ class GDGAjuBot:
                 event['date_pretty'] = date_pretty
                 response.append("%s: %s %s" % (event["name"],
                                                event["date_pretty"],
-                                               event["event_url"]))
+                                               event["link"]))
 
             response = '\n'.join(response)
             self.bot.reply_to(message, response, disable_web_page_preview=True)
