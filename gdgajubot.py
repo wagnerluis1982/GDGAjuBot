@@ -21,10 +21,10 @@ class Resources:
         self.config = config
 
     @cache.cache('get_events', expire=600)
-    def get_events(self):
-        return list(self.generate_events())
+    def get_events(self, n):
+        return list(self.generate_events(n))
 
-    def generate_events(self):
+    def generate_events(self, n):
         """Obtém eventos do Meetup."""
         # api v3 base url
         url = "https://api.meetup.com/%(group_name)s/events" % self.config
@@ -34,7 +34,7 @@ class Resources:
             'key': self.config['meetup_key'],
             'status': 'upcoming',
             'only': 'name,time,link',  # filter response to these fields
-            'page': 5,                 # limit to 5 events
+            'page': n,                 # limit to n events
         })
 
         return r.json()
@@ -73,9 +73,9 @@ class GDGAjuBot:
         """Retorna a lista de eventos do Meetup."""
         logging.info("%s: %s" % (message.from_user.username, "/events"))
         try:
-            all_events = self.resources.get_events()
+            last_events = self.resources.get_events(5)
             response = []
-            for event in all_events[:5]:
+            for event in last_events:
                 # convert time returned by Meetup API
                 time = int(event['time'])/1000
                 time_obj = datetime.datetime.utcfromtimestamp(time)

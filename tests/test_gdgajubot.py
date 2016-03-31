@@ -39,7 +39,7 @@ class MockMessage:
 
 
 class MockResources:
-    def get_events(self):
+    def get_events(self, n):
         return [
             {'link': 'http://www.meetup.com/GDG-Aracaju/events/229313880/',
              'name': 'Hackeando sua Carreira #Hangout',
@@ -65,7 +65,7 @@ class MockResources:
             {'link': 'http://www.meetup.com/GDG-Aracaju/events/229951264/',
              'name': 'Google IO Extended 2016',
              'time': 1463608800000},
-        ]
+        ][:n]
 
     def get_packt_free_book(self):
         return "Android 2099"
