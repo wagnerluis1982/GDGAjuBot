@@ -78,19 +78,15 @@ class GDGAjuBot:
             response = []
             for event in last_events:
                 # convert time returned by Meetup API
-                time = int(event['time'])/1000
-                time_obj = datetime.datetime.utcfromtimestamp(time)
+                event_dt = datetime.datetime.utcfromtimestamp(event['time'] / 1000)
                 # adjust time to UTC-3
-                time_obj -= datetime.timedelta(hours=3)
+                event_dt -= datetime.timedelta(hours=3)
 
                 # create a pretty-looking date
-                date_pretty = time_obj.strftime('%d/%m %H:%M')
+                event['time'] = event_dt.strftime('%d/%m %H:%M')
+                response.append("[%(name)s](%(link)s): %(time)s" % event)
 
-                event['date_pretty'] = date_pretty
-                response.append("[%(name)s](%(link)s): %(date_pretty)s" % event)
-
-            response = '\n'.join(response)
-            self.bot.reply_to(message, response,
+            self.bot.reply_to(message, '\n'.join(response),
                               parse_mode="Markdown", disable_web_page_preview=True)
         except Exception as e:
             print(e)
