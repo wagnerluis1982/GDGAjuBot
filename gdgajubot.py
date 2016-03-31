@@ -84,7 +84,7 @@ class GDGAjuBot:
                 time_obj -= datetime.timedelta(hours=3)
 
                 # create a pretty-looking date
-                date_pretty = time_obj.strftime('%d/%m')
+                date_pretty = time_obj.strftime('%d/%m %H:%M')
 
                 event['date_pretty'] = date_pretty
                 response.append("[%(name)s](%(link)s): %(date_pretty)s" % event)
