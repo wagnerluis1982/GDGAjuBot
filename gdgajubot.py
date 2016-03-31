@@ -5,6 +5,7 @@ import logging
 import re
 import os
 import datetime
+import itertools
 
 import requests
 import telebot
@@ -21,8 +22,8 @@ class Resources:
         self.config = config
 
     @cache.cache('get_events', expire=600)
-    def get_events(self):
-        return list(self.generate_events())
+    def get_events(self, list_size=5):
+        return list(itertools.islice(self.generate_events(), list_size))
 
     def generate_events(self):
         """Obtém eventos do Meetup."""
@@ -84,9 +85,8 @@ class GDGAjuBot:
         """Retorna a lista de eventos do Meetup."""
         logging.info("%s: %s" % (message.from_user.username, "/events"))
         try:
-            all_events = self.resources.get_events()
             response = []
-            for event in all_events[:5]:
+            for event in self.resources.get_events():
                 # convert time returned by Meetup API
                 time = int(event['time'])/1000
                 time_obj = datetime.datetime.utcfromtimestamp(time)
