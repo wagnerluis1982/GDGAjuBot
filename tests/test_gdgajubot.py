@@ -39,33 +39,36 @@ class MockMessage:
 
 
 class MockResources:
+    # Falso cache de eventos
+    cache_events = [
+        {'link': 'http://www.meetup.com/GDG-Aracaju/events/229313880/',
+         'name': 'Hackeando sua Carreira #Hangout',
+         'time': 1459378800000},
+        {'link': 'http://www.meetup.com/GDG-Aracaju/events/229623381/',
+         'name': 'Android Jam 2: Talks Dia 2',
+         'time': 1459612800000},
+        {'link': 'http://www.meetup.com/GDG-Aracaju/events/mwnsrlyvgbjb/',
+         'name': 'Coding Dojo',
+         'time': 1459980000000},
+        {'link': 'http://www.meetup.com/GDG-Aracaju/events/229591464/',
+         'name': 'O Caminho para uma Arquitetura Elegante #Hangout',
+         'time': 1460160000000},
+        {'link': 'http://www.meetup.com/GDG-Aracaju/events/229770309/',
+         'name': 'Android Jam 2: #Curso Dia 2',
+         'time': 1460217600000},
+        {'link': 'http://www.meetup.com/GDG-Aracaju/events/mwnsrlyvhbgb/',
+         'name': 'Coding Dojo',
+         'time': 1462399200000},
+        {'link': 'http://www.meetup.com/GDG-Aracaju/events/229951204/',
+         'name': 'Google I/O Extended',
+         'time': 1463587200000},
+        {'link': 'http://www.meetup.com/GDG-Aracaju/events/229951264/',
+         'name': 'Google IO Extended 2016',
+         'time': 1463608800000},
+    ]
+
     def get_events(self, n):
-        return [
-            {'link': 'http://www.meetup.com/GDG-Aracaju/events/229313880/',
-             'name': 'Hackeando sua Carreira #Hangout',
-             'time': 1459378800000},
-            {'link': 'http://www.meetup.com/GDG-Aracaju/events/229623381/',
-             'name': 'Android Jam 2: Talks Dia 2',
-             'time': 1459612800000},
-            {'link': 'http://www.meetup.com/GDG-Aracaju/events/mwnsrlyvgbjb/',
-             'name': 'Coding Dojo',
-             'time': 1459980000000},
-            {'link': 'http://www.meetup.com/GDG-Aracaju/events/229591464/',
-             'name': 'O Caminho para uma Arquitetura Elegante #Hangout',
-             'time': 1460160000000},
-            {'link': 'http://www.meetup.com/GDG-Aracaju/events/229770309/',
-             'name': 'Android Jam 2: #Curso Dia 2',
-             'time': 1460217600000},
-            {'link': 'http://www.meetup.com/GDG-Aracaju/events/mwnsrlyvhbgb/',
-             'name': 'Coding Dojo',
-             'time': 1462399200000},
-            {'link': 'http://www.meetup.com/GDG-Aracaju/events/229951204/',
-             'name': 'Google I/O Extended',
-             'time': 1463587200000},
-            {'link': 'http://www.meetup.com/GDG-Aracaju/events/229951264/',
-             'name': 'Google IO Extended 2016',
-             'time': 1463608800000},
-        ][:n]
+        return self.cache_events[:n]
 
     def get_packt_free_book(self):
         return "Android 2099"
@@ -107,8 +110,15 @@ class TestGDGAjuBot(unittest.TestCase):
              "[Coding Dojo](http://www.meetup.com/GDG-Aracaju/events/mwnsrlyvgbjb/): 06/04 19:00\n"
              "[O Caminho para uma Arquitetura Elegante #Hangout](http://www.meetup.com/GDG-Aracaju/events/229591464/): 08/04 21:00\n"
              "[Android Jam 2: #Curso Dia 2](http://www.meetup.com/GDG-Aracaju/events/229770309/): 09/04 13:00")
+
+        # Verifica se o response criado está correto
         self.assertEqual(bot.calls[-1],
                          CALL.reply_to(message, r, parse_mode="Markdown", disable_web_page_preview=True))
+
+        # Garante que o cache mutável não gerará uma exceção
+        n_calls = len(bot.calls)
+        g_bot.list_upcoming_events(message)
+        self.assertGreater(len(bot.calls), n_calls)
 
     def test_packtpub_free_learning(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
