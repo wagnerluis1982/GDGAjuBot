@@ -77,19 +77,23 @@ class GDGAjuBot:
             last_events = self.resources.get_events(5)
             response = []
             for event in last_events:
-                # convert time returned by Meetup API
-                event_dt = datetime.datetime.utcfromtimestamp(event['time'] / 1000)
-                # adjust time to UTC-3
-                event_dt -= datetime.timedelta(hours=3)
+                # If the events wasn't in cache, event['time'] is a timestamp.
+                # So we format it!
+                if isinstance(event['time'], int):
+                    # convert time returned by Meetup API
+                    event_dt = datetime.datetime.utcfromtimestamp(event['time'] / 1000)
+                    # adjust time to UTC-3
+                    event_dt -= datetime.timedelta(hours=3)
 
-                # create a pretty-looking date
-                event['time'] = event_dt.strftime('%d/%m %H:%M')
+                    # create a pretty-looking date
+                    event['time'] = event_dt.strftime('%d/%m %H:%M')
+
                 response.append("[%(name)s](%(link)s): %(time)s" % event)
 
             self.bot.reply_to(message, '\n'.join(response),
                               parse_mode="Markdown", disable_web_page_preview=True)
         except Exception as e:
-            print(e)
+            logging.exception(e)
 
     def packtpub_free_learning(self, message):
         """Retorna o livro disponível no free-learning da editora PacktPub."""
