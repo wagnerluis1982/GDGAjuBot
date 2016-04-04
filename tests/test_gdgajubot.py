@@ -6,7 +6,7 @@ sys.path.append('../')
 import time
 import unittest
 import os
-import gdgajubot
+from gdgajubot import gdgajubot
 
 
 class MetaCall:
