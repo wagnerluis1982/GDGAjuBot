@@ -154,6 +154,40 @@ class TestGDGAjuBot(unittest.TestCase):
         r = "https://github.com/GDGAracaju/GDGAjuBot/blob/master/CHANGELOG.md"
         self.assertEqual(called, CALL.send_message(message.chat.id, r))
 
+    # Routing test
+
+    def test_handle_messages(self):
+        bot, resources = MockTeleBot(), MockResources()
+        g_bot = gdgajubot.GDGAjuBot(bot, resources, self.config)
+
+        # test simple commands text
+        commands_asserts = {
+            '/events': self._assert_list_upcoming_events,
+            '/start': self._assert_send_welcome,
+            '/changelog': self._assert_changelog,
+            '/book': self._assert_packtpub_free_learning,
+            '/help': self._assert_send_welcome,
+        }
+        messages = [MockMessage(id=i, text=cmd, content_type="text")
+                    for i, cmd in enumerate(commands_asserts)]
+        for i, _assert in enumerate(commands_asserts.values()):
+            g_bot.handle_messages(messages[i:i+1])
+            _assert(bot.calls[-1], messages[i])
+
+        # test qualifying commands text
+        commands_asserts = {
+            '/events@gdgajubot': self._assert_list_upcoming_events,
+            '/start@erickbot': self._assert_send_welcome,
+            '/changelog@wagnerbot': self._assert_changelog,
+            '/book@brandinibot': self._assert_packtpub_free_learning,
+            '/help@thalesbot': self._assert_send_welcome,
+        }
+        messages = [MockMessage(id=i, text=cmd, content_type="text")
+                    for i, cmd in enumerate(commands_asserts)]
+        for i, _assert in enumerate(commands_asserts.values()):
+            g_bot.handle_messages(messages[i:i+1])
+            _assert(bot.calls[-1], messages[i])
+
 
 class TestResources(unittest.TestCase):
     cd = os.path.dirname(__file__)
