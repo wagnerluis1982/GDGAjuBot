@@ -12,7 +12,7 @@ from beaker.cache import CacheManager
 from beaker.util import parse_cache_config_options
 from bs4 import BeautifulSoup
 
-from gdgajubot import util
+from . import util
 
 
 class Resources:
