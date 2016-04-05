@@ -3,7 +3,6 @@ import sys
 
 sys.path.append('../')
 
-import time
 import unittest
 import os
 from gdgajubot import gdgajubot
@@ -33,8 +32,11 @@ class MockTeleBot:
 
 
 class MockMessage:
+    def __init__(self, **kwargs):
+        self.__dict__.update(**kwargs)
+
     # Método definido para não ter AttributeError
-    def __getattribute__(self, item):
+    def __getattr__(self, item):
         return self
 
 
@@ -75,6 +77,10 @@ class MockResources:
 
 
 class TestGDGAjuBot(unittest.TestCase):
+    config = {'group_name': 'Test-Bot'}
+
+    # Regular expressions tests
+
     def test_find_ruby(self):
         assert gdgajubot.find_ruby("Olá ruby GDG")
         assert gdgajubot.find_ruby("Olá RUBY GDG")
@@ -93,27 +99,21 @@ class TestGDGAjuBot(unittest.TestCase):
         assert gdgajubot.find_python("Olá PYTHON GDG")
         assert not gdgajubot.find_python("OlápythonGDG")
 
+    # Bot commands tests
+
     def test_send_welcome(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
-        config = {'group_name': 'Test-Bot'}
-        g_bot = gdgajubot.GDGAjuBot(bot, resources, config)
+        g_bot = gdgajubot.GDGAjuBot(bot, resources, self.config)
         g_bot.send_welcome(message)
-        self.assertEqual(bot.calls[-1],
-                         CALL.reply_to(message, "Este bot faz buscas no Meetup do Test-Bot"))
+        self._assert_send_welcome(bot.calls[-1], message)
 
     def test_list_upcoming_events(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
-        g_bot = gdgajubot.GDGAjuBot(bot, resources, {})
+        g_bot = gdgajubot.GDGAjuBot(bot, resources, self.config)
         g_bot.list_upcoming_events(message)
-        r = ("[Hackeando sua Carreira #Hangout](http://www.meetup.com/GDG-Aracaju/events/229313880/): 30/03 20:00\n"
-             "[Android Jam 2: Talks Dia 2](http://www.meetup.com/GDG-Aracaju/events/229623381/): 02/04 13:00\n"
-             "[Coding Dojo](http://www.meetup.com/GDG-Aracaju/events/mwnsrlyvgbjb/): 06/04 19:00\n"
-             "[O Caminho para uma Arquitetura Elegante #Hangout](http://www.meetup.com/GDG-Aracaju/events/229591464/): 08/04 21:00\n"
-             "[Android Jam 2: #Curso Dia 2](http://www.meetup.com/GDG-Aracaju/events/229770309/): 09/04 13:00")
 
         # Verifica se o response criado está correto
-        self.assertEqual(bot.calls[-1],
-                         CALL.reply_to(message, r, parse_mode="Markdown", disable_web_page_preview=True))
+        self._assert_list_upcoming_events(bot.calls[-1], message)
 
         # Garante que o cache mutável não gerará uma exceção
         n_calls = len(bot.calls)
@@ -122,11 +122,71 @@ class TestGDGAjuBot(unittest.TestCase):
 
     def test_packtpub_free_learning(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
-        g_bot = gdgajubot.GDGAjuBot(bot, resources, {})
+        g_bot = gdgajubot.GDGAjuBot(bot, resources, self.config)
         g_bot.packtpub_free_learning(message)
-        r = "O livro de hoje é: [Android 2099](https://www.packtpub.com/packt/offers/free-learning)"
-        self.assertEqual(bot.calls[-1],
+        self._assert_packtpub_free_learning(bot.calls[-1], message)
+
+    def test_changelog(self):
+        bot, resources, message = MockTeleBot(), MockResources(), MockMessage(id=0xB00B)
+        g_bot = gdgajubot.GDGAjuBot(bot, resources, self.config)
+        g_bot.changelog(message)
+        self._assert_changelog(bot.calls[-1], message)
+
+    def _assert_send_welcome(self, called, message):
+        self.assertEqual(called,
+                         CALL.reply_to(message, "Este bot faz buscas no Meetup do Test-Bot"))
+
+    def _assert_list_upcoming_events(self, called, message):
+        r = ("[Hackeando sua Carreira #Hangout](http://www.meetup.com/GDG-Aracaju/events/229313880/): 30/03 20:00\n"
+             "[Android Jam 2: Talks Dia 2](http://www.meetup.com/GDG-Aracaju/events/229623381/): 02/04 13:00\n"
+             "[Coding Dojo](http://www.meetup.com/GDG-Aracaju/events/mwnsrlyvgbjb/): 06/04 19:00\n"
+             "[O Caminho para uma Arquitetura Elegante #Hangout](http://www.meetup.com/GDG-Aracaju/events/229591464/): 08/04 21:00\n"
+             "[Android Jam 2: #Curso Dia 2](http://www.meetup.com/GDG-Aracaju/events/229770309/): 09/04 13:00")
+        self.assertEqual(called,
                          CALL.reply_to(message, r, parse_mode="Markdown", disable_web_page_preview=True))
+
+    def _assert_packtpub_free_learning(self, called, message):
+        r = "O livro de hoje é: [Android 2099](https://www.packtpub.com/packt/offers/free-learning)"
+        self.assertEqual(called,
+                         CALL.reply_to(message, r, parse_mode="Markdown", disable_web_page_preview=True))
+
+    def _assert_changelog(self, called, message):
+        r = "https://github.com/GDGAracaju/GDGAjuBot/blob/master/CHANGELOG.md"
+        self.assertEqual(called, CALL.send_message(message.chat.id, r))
+
+    # Routing test
+
+    def test_handle_messages(self):
+        bot, resources = MockTeleBot(), MockResources()
+        g_bot = gdgajubot.GDGAjuBot(bot, resources, self.config)
+
+        # test simple commands text
+        commands_asserts = {
+            '/events': self._assert_list_upcoming_events,
+            '/start': self._assert_send_welcome,
+            '/changelog': self._assert_changelog,
+            '/book': self._assert_packtpub_free_learning,
+            '/help': self._assert_send_welcome,
+        }
+        messages = [MockMessage(id=i, text=cmd, content_type="text")
+                    for i, cmd in enumerate(commands_asserts)]
+        for i, _assert in enumerate(commands_asserts.values()):
+            g_bot.handle_messages(messages[i:i+1])
+            _assert(bot.calls[-1], messages[i])
+
+        # test qualifying commands text
+        commands_asserts = {
+            '/events@gdgajubot': self._assert_list_upcoming_events,
+            '/start@erickbot': self._assert_send_welcome,
+            '/changelog@wagnerbot': self._assert_changelog,
+            '/book@brandinibot': self._assert_packtpub_free_learning,
+            '/help@thalesbot': self._assert_send_welcome,
+        }
+        messages = [MockMessage(id=i, text=cmd, content_type="text")
+                    for i, cmd in enumerate(commands_asserts)]
+        for i, _assert in enumerate(commands_asserts.values()):
+            g_bot.handle_messages(messages[i:i+1])
+            _assert(bot.calls[-1], messages[i])
 
 
 class TestResources(unittest.TestCase):
