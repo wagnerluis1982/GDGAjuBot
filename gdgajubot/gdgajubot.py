@@ -60,6 +60,7 @@ find_python = re.compile(r"(?i)\bPYTHON\b").search
 
 # Helper para definir os comandos do bot
 handler = util.HandlerHelper()
+commands = handler.commands
 
 
 class GDGAjuBot:
@@ -69,13 +70,13 @@ class GDGAjuBot:
         self.config = config
         bot.set_update_listener(self.handle_messages)
 
-    @handler.commands('/start', '/help')
+    @commands('/start', '/help')
     def send_welcome(self, message):
         """Mensagem de apresentação do bot."""
         logging.info("/start")
         self.bot.reply_to(message, "Este bot faz buscas no Meetup do %s" % (self.config["group_name"]))
 
-    @handler.commands('/events')
+    @commands('/events')
     def list_upcoming_events(self, message):
         """Retorna a lista de eventos do Meetup."""
         logging.info("%s: %s" % (message.from_user.username, "/events"))
@@ -101,7 +102,7 @@ class GDGAjuBot:
         except Exception as e:
             logging.exception(e)
 
-    @handler.commands('/book')
+    @commands('/book')
     def packtpub_free_learning(self, message):
         """Retorna o livro disponível no free-learning da editora PacktPub."""
         logging.info("%s: %s" % (message.from_user.username, "/book"))
@@ -109,6 +110,11 @@ class GDGAjuBot:
         self.bot.reply_to(message,
                           "O livro de hoje é: [%s](https://www.packtpub.com/packt/offers/free-learning)" % book,
                           parse_mode="Markdown", disable_web_page_preview=True)
+
+    @commands('/changelog')
+    def changelog(self, message):
+        logging.info("%s: %s" % (message.from_user.username, "/changelog"))
+        self.bot.send_message(message.chat.id, "https://github.com/GDGAracaju/GDGAjuBot/blob/master/CHANGELOG.md")
 
     def love_ruby(self, message):
         """Easter Egg com o Ruby."""
@@ -125,11 +131,6 @@ class GDGAjuBot:
         """Easter Egg com o Python."""
         logging.info("%s: %s" % (message.from_user.username, "python"))
         self.bot.send_message(message.chat.id, "import antigravity")
-
-    @handler.commands('/changelog')
-    def changelog(self, message):
-        logging.info("%s: %s" % (message.from_user.username, "/changelog"))
-        self.bot.send_message(message.chat.id, "https://github.com/GDGAracaju/GDGAjuBot/blob/master/CHANGELOG.md")
 
     def handle_messages(self, messages):
         for message in messages:
