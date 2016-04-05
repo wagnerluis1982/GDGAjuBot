@@ -3,7 +3,6 @@ import sys
 
 sys.path.append('../')
 
-import time
 import unittest
 import os
 from gdgajubot import gdgajubot
@@ -33,8 +32,11 @@ class MockTeleBot:
 
 
 class MockMessage:
+    def __init__(self, **kwargs):
+        self.__dict__.update(**kwargs)
+
     # Método definido para não ter AttributeError
-    def __getattribute__(self, item):
+    def __getattr__(self, item):
         return self
 
 
@@ -75,6 +77,8 @@ class MockResources:
 
 
 class TestGDGAjuBot(unittest.TestCase):
+    # Regular expressions tests
+
     def test_find_ruby(self):
         assert gdgajubot.find_ruby("Olá ruby GDG")
         assert gdgajubot.find_ruby("Olá RUBY GDG")
@@ -92,6 +96,8 @@ class TestGDGAjuBot(unittest.TestCase):
         assert gdgajubot.find_python("Olá Python GDG")
         assert gdgajubot.find_python("Olá PYTHON GDG")
         assert not gdgajubot.find_python("OlápythonGDG")
+
+    # Bot commands tests
 
     def test_send_welcome(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
@@ -127,6 +133,13 @@ class TestGDGAjuBot(unittest.TestCase):
         r = "O livro de hoje é: [Android 2099](https://www.packtpub.com/packt/offers/free-learning)"
         self.assertEqual(bot.calls[-1],
                          CALL.reply_to(message, r, parse_mode="Markdown", disable_web_page_preview=True))
+
+    def test_changelog(self):
+        bot, resources, message = MockTeleBot(), MockResources(), MockMessage(id=0xB00B)
+        g_bot = gdgajubot.GDGAjuBot(bot, resources, {})
+        g_bot.changelog(message)
+        r = "https://github.com/GDGAracaju/GDGAjuBot/blob/master/CHANGELOG.md"
+        self.assertEqual(bot.calls[-1], CALL.send_message(message.chat.id, r))
 
 
 class TestResources(unittest.TestCase):
