@@ -5,13 +5,14 @@ import logging
 import re
 import os
 import datetime
-import itertools
 
 import requests
 import telebot
 from beaker.cache import CacheManager
 from beaker.util import parse_cache_config_options
 from bs4 import BeautifulSoup
+
+from gdgajubot import util
 
 
 class Resources:
@@ -57,6 +58,9 @@ find_ruby = re.compile(r"(?i)\bRUBY\b").search
 find_java = re.compile(r"(?i)\bJAVA\b").search
 find_python = re.compile(r"(?i)\bPYTHON\b").search
 
+# Helper para definir os comandos do bot
+handler = util.HandlerHelper()
+
 
 class GDGAjuBot:
     def __init__(self, bot, resources, config):
@@ -65,11 +69,13 @@ class GDGAjuBot:
         self.config = config
         bot.set_update_listener(self.handle_messages)
 
+    @handler.commands('/start', '/help')
     def send_welcome(self, message):
         """Mensagem de apresentação do bot."""
         logging.info("/start")
         self.bot.reply_to(message, "Este bot faz buscas no Meetup do %s" % (self.config["group_name"]))
 
+    @handler.commands('/events')
     def list_upcoming_events(self, message):
         """Retorna a lista de eventos do Meetup."""
         logging.info("%s: %s" % (message.from_user.username, "/events"))
@@ -95,6 +101,7 @@ class GDGAjuBot:
         except Exception as e:
             logging.exception(e)
 
+    @handler.commands('/book')
     def packtpub_free_learning(self, message):
         """Retorna o livro disponível no free-learning da editora PacktPub."""
         logging.info("%s: %s" % (message.from_user.username, "/book"))
@@ -119,6 +126,7 @@ class GDGAjuBot:
         logging.info("%s: %s" % (message.from_user.username, "python"))
         self.bot.send_message(message.chat.id, "import antigravity")
 
+    @handler.commands('/changelog')
     def changelog(self, message):
         logging.info("%s: %s" % (message.from_user.username, "/changelog"))
         self.bot.send_message(message.chat.id, "https://github.com/GDGAracaju/GDGAjuBot/blob/master/CHANGELOG.md")
@@ -127,15 +135,9 @@ class GDGAjuBot:
         for message in messages:
             if message.content_type == "text":
                 # Identifica o comando e despacha para a função correta
-                command = telebot.util.extract_command(message.text)
-                if command in ['start', 'help']:
-                    self.send_welcome(message)
-                elif command == 'events':
-                    self.list_upcoming_events(message)
-                elif command == 'book':
-                    self.packtpub_free_learning(message)
-                elif command == 'changelog':
-                    self.changelog(message)
+                command = util.extract_command(message.text)
+                if command:
+                    handler.handle_command(command, *(self, message))
 
                 # Easter eggs
                 elif find_ruby(message.text):
