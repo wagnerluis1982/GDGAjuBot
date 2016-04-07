@@ -81,35 +81,60 @@ class GDGAjuBot:
         """Retorna a lista de eventos do Meetup."""
         logging.info("%s: %s" % (message.from_user.username, "/events"))
         try:
-            last_events = self.resources.get_events(5)
-            response = []
-            for event in last_events:
-                # If the events wasn't in cache, event['time'] is a timestamp.
-                # So we format it!
-                if isinstance(event['time'], int):
-                    # convert time returned by Meetup API
-                    event_dt = datetime.datetime.utcfromtimestamp(event['time'] / 1000)
-                    # adjust time to UTC-3
-                    event_dt -= datetime.timedelta(hours=3)
-
-                    # create a pretty-looking date
-                    event['time'] = event_dt.strftime('%d/%m %H:%M')
-
-                response.append("[%(name)s](%(link)s): %(time)s" % event)
-
-            self.bot.reply_to(message, '\n'.join(response),
+            next_events = self.resources.get_events(5)
+            response = self._format_events(next_events)
+            self._smart_reply(message, response,
                               parse_mode="Markdown", disable_web_page_preview=True)
         except Exception as e:
             logging.exception(e)
+
+    def _format_events(self, events):
+        response = []
+        for event in events:
+            # If the events wasn't in cache, event['time'] is a timestamp.
+            # So we format it!
+            if isinstance(event['time'], int):
+                # convert time returned by Meetup API
+                event_dt = datetime.datetime.utcfromtimestamp(event['time'] / 1000)
+                # adjust time to UTC-3
+                event_dt -= datetime.timedelta(hours=3)
+
+                # create a pretty-looking date
+                event['time'] = event_dt.strftime('%d/%m %H:%M')
+
+            response.append("[%(name)s](%(link)s): %(time)s" % event)
+        return '\n'.join(response)
 
     @commands('/book')
     def packtpub_free_learning(self, message):
         """Retorna o livro disponível no free-learning da editora PacktPub."""
         logging.info("%s: %s" % (message.from_user.username, "/book"))
         book = self.resources.get_packt_free_book()
-        self.bot.reply_to(message,
+        self._smart_reply(message,
                           "O livro de hoje é: [%s](https://www.packtpub.com/packt/offers/free-learning)" % book,
                           parse_mode="Markdown", disable_web_page_preview=True)
+
+    def _smart_reply(self, message, text, **kwargs):
+        # On groups or supergroups, check if I have a recent previous response to refer
+        if message.chat.type in ["group", "supergroup"]:
+            # Retrieve from cache and set if necessary
+            key = "p%s" % util.extract_command(text)
+            previous_cache = Resources.cache.get_cache(key, expire=600)
+            previous = previous_cache.get(key=message.chat.id, createfunc=dict)
+
+            # Verify if previous response is the same to send a contextual response
+            if previous.get('text') == text:
+                self.bot.send_message(message.chat.id, "Clique para ver a última resposta",
+                                      reply_to_message_id=previous['message_id'])
+            # or, send new response and update the cache
+            else:
+                sent = self.bot.reply_to(message, text, **kwargs)
+                previous.update({'text': text, 'message_id': sent.message_id})
+                previous_cache[message.chat.id] = previous  # reset expire time
+
+        # On private chats or channels, send the normal reply...
+        else:
+            self.bot.reply_to(message, text, **kwargs)
 
     @commands('/changelog')
     def changelog(self, message):

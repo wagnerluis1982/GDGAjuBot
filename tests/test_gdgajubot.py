@@ -154,6 +154,35 @@ class TestGDGAjuBot(unittest.TestCase):
         r = "https://github.com/GDGAracaju/GDGAjuBot/blob/master/CHANGELOG.md"
         self.assertEqual(called, CALL.send_message(message.chat.id, r))
 
+    # Internals tests
+
+    def test_smart_reply(self):
+        bot, resources = MockTeleBot(), MockResources()
+        message = MockMessage(id=0x6D6)
+        g_bot = gdgajubot.GDGAjuBot(bot, resources, self.config)
+        text = "I <3 GDG Aracaju"
+
+        # Mensagens privadas não fazem link
+        message.chat.type = "private"
+        g_bot._smart_reply(message, text)
+        self.assertEqual(bot.calls[-1], CALL.reply_to(message, text))
+        g_bot._smart_reply(message, text)
+        self.assertEqual(bot.calls[-1], CALL.reply_to(message, text))
+
+        # Alterando MockTeleBot reply_to para retornar um MockMessage com um message_id
+        def _reply_to(*args):
+            bot.__getattr__('reply_to')(*args)  # mantém o registro de chamada
+            return MockMessage(message_id=82)
+        bot.reply_to = _reply_to
+
+        # Mensagens de grupo fazem link
+        message.chat.type = "group"
+        g_bot._smart_reply(message, text)
+        self.assertEqual(bot.calls[-1], CALL.reply_to(message, text))
+        g_bot._smart_reply(message, text)
+        self.assertEqual(bot.calls[-1], CALL.send_message(message.chat.id, "Clique para ver a última resposta",
+                                                          reply_to_message_id=82))
+
     # Routing test
 
     def test_handle_messages(self):
