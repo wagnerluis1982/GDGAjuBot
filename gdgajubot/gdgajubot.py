@@ -187,9 +187,9 @@ def main():
     # Configuring bot parameters
     logging.info("Configurando parâmetros")
     parser = argparse.ArgumentParser(description='Bot do GDG Aracaju')
-    parser.add_argument('-t', '--telegram_token', help='Token da API do Telegram')
-    parser.add_argument('-m', '--meetup_key', help='Key da API do Meetup')
-    parser.add_argument('-g', '--group_name', help='Grupo do Meetup')
+    parser.add_argument('-t', '--telegram_token', help='Token da API do Telegram', required=True)
+    parser.add_argument('-m', '--meetup_key', help='Key da API do Meetup', required=True)
+    parser.add_argument('-g', '--group_name', help='Grupo do Meetup', required=True)
     parser.add_argument('--regex', help=argparse.SUPPRESS, nargs='?', const=True, default=False)
     namespace = parser.parse_args()
 
