@@ -190,7 +190,20 @@ def main():
     parser.add_argument('-t', '--telegram_token', help='Token da API do Telegram')
     parser.add_argument('-m', '--meetup_key', help='Key da API do Meetup')
     parser.add_argument('-g', '--group_name', help='Grupo do Meetup')
+    parser.add_argument('--regex', help=argparse.SUPPRESS, nargs='?', const=True, default=False)
     namespace = parser.parse_args()
+
+    if namespace.regex:
+        def extract_packt_free_book(content):
+            try:
+                book = re.search(rb'(?s)"deal-of-the-day".*?<div[ >].*?<div[ >].*?<div[ >].*?</div>.*?<div[ >].*?<div[ >].*?</div>.*?<div[ >].*?<h2[ >](.*?)</h2>',
+                                 content).group(1)
+                return book.strip().decode()
+            except Exception as e:
+                logging.exception(e)
+        Resources.extract_packt_free_book = staticmethod(extract_packt_free_book)
+        logging.warning("Ativada a extração de livros por regex")
+    del namespace.regex
 
     _config = {k: v or os.environ.get(k.upper(), '')
                for k, v in vars(namespace).items()}
