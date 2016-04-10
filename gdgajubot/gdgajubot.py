@@ -15,6 +15,16 @@ from bs4 import BeautifulSoup
 from . import util
 
 
+book_re = re.compile(
+    rb'(?s)'  # re.DOTALL
+    rb'"deal-of-the-day".*?'             # #deal-of-the-day
+    rb'<div[ >].*?<div[ >].*?'           # div div
+    rb'<div[ >].*?</div>.*?<div[ >].*?'  # div:nth-of-type(2)
+    rb'<div[ >].*?</div>.*?<div[ >].*?'  # div:nth-of-type(2)
+    rb'<h2[ >](.*?)</h2>'                # h2
+)
+
+
 class Resources:
     # Configuring cache
     cache = CacheManager(**parse_cache_config_options({'cache.type': 'memory'}))
@@ -48,6 +58,13 @@ class Resources:
 
     @staticmethod
     def extract_packt_free_book(content):
+        # Try to get book with re
+        try:
+            return book_re.search(content).group(1).strip().decode()
+        except Exception as e:
+            logging.exception(e)
+
+        # Fallback to html parser
         page = BeautifulSoup(content, 'html.parser')
         book = page.select_one('#deal-of-the-day div div div:nth-of-type(2) div:nth-of-type(2) h2')
         return book.text.strip()
@@ -190,20 +207,7 @@ def main():
     parser.add_argument('-t', '--telegram_token', help='Token da API do Telegram')
     parser.add_argument('-m', '--meetup_key', help='Key da API do Meetup')
     parser.add_argument('-g', '--group_name', help='Grupo do Meetup')
-    parser.add_argument('--regex', help=argparse.SUPPRESS, nargs='?', const=True, default=False)
     namespace = parser.parse_args()
-
-    if namespace.regex:
-        def extract_packt_free_book(content):
-            try:
-                book = re.search(rb'(?s)"deal-of-the-day".*?<div[ >].*?<div[ >].*?<div[ >].*?</div>.*?<div[ >].*?<div[ >].*?</div>.*?<div[ >].*?<h2[ >](.*?)</h2>',
-                                 content).group(1)
-                return book.strip().decode()
-            except Exception as e:
-                logging.exception(e)
-        Resources.extract_packt_free_book = staticmethod(extract_packt_free_book)
-        logging.warning("Ativada a extração de livros por regex")
-    del namespace.regex
 
     # Mounting config
     _config = {k: v or os.environ.get(k.upper(), '')
