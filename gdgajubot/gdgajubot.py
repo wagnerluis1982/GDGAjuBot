@@ -187,9 +187,9 @@ def main():
     # Configuring bot parameters
     logging.info("Configurando parâmetros")
     parser = argparse.ArgumentParser(description='Bot do GDG Aracaju')
-    parser.add_argument('-t', '--telegram_token', help='Token da API do Telegram', required=True)
-    parser.add_argument('-m', '--meetup_key', help='Key da API do Meetup', required=True)
-    parser.add_argument('-g', '--group_name', help='Grupo do Meetup', required=True)
+    parser.add_argument('-t', '--telegram_token', help='Token da API do Telegram')
+    parser.add_argument('-m', '--meetup_key', help='Key da API do Meetup')
+    parser.add_argument('-g', '--group_name', help='Grupo do Meetup')
     parser.add_argument('--regex', help=argparse.SUPPRESS, nargs='?', const=True, default=False)
     namespace = parser.parse_args()
 
@@ -205,8 +205,16 @@ def main():
         logging.warning("Ativada a extração de livros por regex")
     del namespace.regex
 
+    # Mounting config
     _config = {k: v or os.environ.get(k.upper(), '')
                for k, v in vars(namespace).items()}
+
+    # Verifying required arguments
+    missing_args = [k.upper() for k, v in _config.items() if not v]
+    if missing_args:
+        import sys
+        print("error: missing arguments:", ", ".join(missing_args), file=sys.stderr)
+        exit(1)
 
     # Starting bot
     logging.info("Iniciando bot")
