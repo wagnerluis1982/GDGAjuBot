@@ -5,6 +5,8 @@ sys.path.append('../')
 
 import unittest
 import os
+from datetime import datetime, timedelta
+
 from gdgajubot import gdgajubot
 
 
@@ -72,8 +74,12 @@ class MockResources:
     def get_events(self, n):
         return self.cache_events[:n]
 
+    # Valores fixos para get_packt_free_book
+    bookname = "Android 2099"
+    bookts = 4091565600
+
     def get_packt_free_book(self):
-        return "Android 2099"
+        return self.bookname, self.bookts
 
 
 class TestGDGAjuBot(unittest.TestCase):
@@ -123,8 +129,28 @@ class TestGDGAjuBot(unittest.TestCase):
     def test_packtpub_free_learning(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
         g_bot = gdgajubot.GDGAjuBot(bot, resources, self.config)
-        g_bot.packtpub_free_learning(message)
+        ts = resources.bookts
+        _3h = timedelta(hours=3)
+
+        # Sem warning
+        g_bot.packtpub_free_learning(message, now=datetime.utcfromtimestamp(ts - 10*3600))
         self._assert_packtpub_free_learning(bot.calls[-1], message)
+
+        # Os próximos testes verificam cada um dos warnings
+        g_bot.packtpub_free_learning(message, now=datetime.utcfromtimestamp(ts - 59*60) - _3h)
+        self._assert_packtpub_free_learning(bot.calls[-1], message, warning="\n\nFaltam menos de 1 hora!")
+
+        g_bot.packtpub_free_learning(message, now=datetime.utcfromtimestamp(ts - 29*60) - _3h)
+        self._assert_packtpub_free_learning(bot.calls[-1], message, warning="\n\nFaltam menos de meia hora!")
+
+        g_bot.packtpub_free_learning(message, now=datetime.utcfromtimestamp(ts - 9*60) - _3h)
+        self._assert_packtpub_free_learning(bot.calls[-1], message, warning="\n\nFaltam menos de 10 minutos!")
+
+        g_bot.packtpub_free_learning(message, now=datetime.utcfromtimestamp(ts - 59) - _3h)
+        self._assert_packtpub_free_learning(bot.calls[-1], message, warning="\n\nFaltam menos de 1 minuto!")
+
+        g_bot.packtpub_free_learning(message, now=datetime.utcfromtimestamp(ts - 29) - _3h)
+        self._assert_packtpub_free_learning(bot.calls[-1], message, warning="\n\nFaltam menos de 30 segundos!")
 
     def test_changelog(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage(id=0xB00B)
@@ -145,8 +171,8 @@ class TestGDGAjuBot(unittest.TestCase):
         self.assertEqual(called,
                          CALL.reply_to(message, r, parse_mode="Markdown", disable_web_page_preview=True))
 
-    def _assert_packtpub_free_learning(self, called, message):
-        r = "O livro de hoje é: [Android 2099](https://www.packtpub.com/packt/offers/free-learning)"
+    def _assert_packtpub_free_learning(self, called, message, warning=''):
+        r = "O livro de hoje é: [Android 2099](https://www.packtpub.com/packt/offers/free-learning)" + warning
         self.assertEqual(called,
                          CALL.reply_to(message, r, parse_mode="Markdown", disable_web_page_preview=True))
 
@@ -222,6 +248,6 @@ class TestResources(unittest.TestCase):
     cd = os.path.dirname(__file__)
 
     def test_extract_packt_free_book(self):
-        content = open(os.path.join(self.cd, 'packtpub-free-learning.html'))
+        content = open(os.path.join(self.cd, 'packtpub-free-learning.html'), 'rb')
         self.assertEqual(gdgajubot.Resources.extract_packt_free_book(content),
-                         "Oracle Enterprise Manager 12c Administration Cookbook")
+                         ("Oracle Enterprise Manager 12c Administration Cookbook", 1459378800))
