@@ -15,12 +15,12 @@ from bs4 import BeautifulSoup
 from . import util
 
 book_re = re.compile(
-    rb'(?s)'  # re.DOTALL
-    rb'"deal-of-the-day".*?'             # #deal-of-the-day
-    rb'<div[ >].*?<div[ >].*?'           # div div
-    rb'<div[ >].*?</div>.*?<div[ >].*?'  # div:nth-of-type(2)
-    rb'<span class="packt-js-countdown" data-countdown-to="([0-9]+)"></span>.*?'  # span.packt-js-countdown
-    rb'<h2[ >]\s*(.*?)\s*</h2>'          # h2
+    r'(?s)'  # re.DOTALL
+    r'"deal-of-the-day".*?'             # #deal-of-the-day
+    r'<div[ >].*?<div[ >].*?'           # div div
+    r'<div[ >].*?</div>.*?<div[ >].*?'  # div:nth-of-type(2)
+    r'<span class="packt-js-countdown" data-countdown-to="([0-9]+)"></span>.*?'  # span.packt-js-countdown
+    r'<h2[ >]\s*(.*?)\s*</h2>'          # h2
 )
 
 
@@ -53,16 +53,19 @@ class Resources:
     @cache.cache('get_packt_free_book', expire=600)
     def get_packt_free_book(self):
         r = requests.get("https://www.packtpub.com/packt/offers/free-learning")
-        return self.extract_packt_free_book(r.content)
+        return self.extract_packt_free_book(r.content, r.encoding)
 
     @staticmethod
-    def extract_packt_free_book(content):
+    def extract_packt_free_book(content, encoding='utf-8'):
+        if hasattr(content, 'read'):    # file-type
+            content = content.read()
+        if isinstance(content, bytes):  # convert to str
+            content = content.decode(encoding)
+
         # Try to get book with re
         try:
-            if hasattr(content, 'read'):
-                content = content.read()
             m = book_re.search(content)
-            book = m.group(2).decode()
+            book = m.group(2)
             expires = m.group(1)
             return book, int(expires)
         except Exception as e:
