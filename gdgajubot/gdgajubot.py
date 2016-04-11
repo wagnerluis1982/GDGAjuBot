@@ -14,14 +14,13 @@ from bs4 import BeautifulSoup
 
 from . import util
 
-
 book_re = re.compile(
     rb'(?s)'  # re.DOTALL
     rb'"deal-of-the-day".*?'             # #deal-of-the-day
     rb'<div[ >].*?<div[ >].*?'           # div div
     rb'<div[ >].*?</div>.*?<div[ >].*?'  # div:nth-of-type(2)
-    rb'<div[ >].*?</div>.*?<div[ >].*?'  # div:nth-of-type(2)
-    rb'<h2[ >](.*?)</h2>'                # h2
+    rb'<span class="packt-js-countdown" data-countdown-to="([0-9]+)"></span>.*?'  # span.packt-js-countdown
+    rb'<h2[ >]\s*(.*?)\s*</h2>'          # h2
 )
 
 
@@ -60,14 +59,21 @@ class Resources:
     def extract_packt_free_book(content):
         # Try to get book with re
         try:
-            return book_re.search(content).group(1).strip().decode()
+            if hasattr(content, 'read'):
+                content = content.read()
+            m = book_re.search(content)
+            book = m.group(2).decode()
+            expires = m.group(1)
+            return book, int(expires)
         except Exception as e:
             logging.exception(e)
 
         # Fallback to html parser
         page = BeautifulSoup(content, 'html.parser')
-        book = page.select_one('#deal-of-the-day div div div:nth-of-type(2) div:nth-of-type(2) h2')
-        return book.text.strip()
+        dealoftheday = page.select_one('#deal-of-the-day')
+        book = dealoftheday.select_one('div div div:nth-of-type(2) div:nth-of-type(2) h2')
+        expires = dealoftheday.select_one('span.packt-js-countdown').attrs['data-countdown-to']
+        return book.text.strip(), int(expires)
 
 
 # Funções de busca usadas nas easter eggs
@@ -123,13 +129,35 @@ class GDGAjuBot:
         return '\n'.join(response)
 
     @commands('/book')
-    def packtpub_free_learning(self, message):
+    def packtpub_free_learning(self, message, now=None):
         """Retorna o livro disponível no free-learning da editora PacktPub."""
         logging.info("%s: %s" % (message.from_user.username, "/book"))
-        book = self.resources.get_packt_free_book()
-        self._smart_reply(message,
-                          "O livro de hoje é: [%s](https://www.packtpub.com/packt/offers/free-learning)" % book,
+        book, expires = self.resources.get_packt_free_book()
+        self._smart_reply(message, self._book_response(book, expires, now),
                           parse_mode="Markdown", disable_web_page_preview=True)
+
+    def _book_response(self, book, expires, now=None):
+        if now is None:
+            now = datetime.datetime.now()
+
+        delta = datetime.datetime.utcfromtimestamp(expires - 3*3600) - now
+        seconds = delta.total_seconds()
+
+        warning = "\n\nFaltam menos de %s!"
+        if seconds <= 30:
+            warning %= '30 segundos'
+        elif seconds <= 60:
+            warning %= '1 minuto'
+        elif seconds <= 600:
+            warning %= '10 minutos'
+        elif seconds <= 1800:
+            warning %= 'meia hora'
+        elif seconds <= 3600:
+            warning %= '1 hora'
+        else:
+            warning = ''
+
+        return "O livro de hoje é: [%s](https://www.packtpub.com/packt/offers/free-learning)" % book + warning
 
     def _smart_reply(self, message, text, **kwargs):
         # On groups or supergroups, check if I have a recent previous response to refer
