@@ -5,7 +5,7 @@ sys.path.append('../')
 
 import unittest
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from gdgajubot import gdgajubot
 
@@ -130,25 +130,26 @@ class TestGDGAjuBot(unittest.TestCase):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
         g_bot = gdgajubot.GDGAjuBot(bot, resources, self.config)
         ts = resources.bookts
+        _3h = timedelta(hours=3)
 
         # Sem warning
-        g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 10*3600))
+        g_bot.packtpub_free_learning(message, now=datetime.utcfromtimestamp(ts - 10*3600))
         self._assert_packtpub_free_learning(bot.calls[-1], message)
 
         # Os próximos testes verificam cada um dos warnings
-        g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 59*60))
+        g_bot.packtpub_free_learning(message, now=datetime.utcfromtimestamp(ts - 59*60) - _3h)
         self._assert_packtpub_free_learning(bot.calls[-1], message, warning="\n\nFaltam menos de 1 hora!")
 
-        g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 29*60))
+        g_bot.packtpub_free_learning(message, now=datetime.utcfromtimestamp(ts - 29*60) - _3h)
         self._assert_packtpub_free_learning(bot.calls[-1], message, warning="\n\nFaltam menos de meia hora!")
 
-        g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 9*60))
+        g_bot.packtpub_free_learning(message, now=datetime.utcfromtimestamp(ts - 9*60) - _3h)
         self._assert_packtpub_free_learning(bot.calls[-1], message, warning="\n\nFaltam menos de 10 minutos!")
 
-        g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 59))
+        g_bot.packtpub_free_learning(message, now=datetime.utcfromtimestamp(ts - 59) - _3h)
         self._assert_packtpub_free_learning(bot.calls[-1], message, warning="\n\nFaltam menos de 1 minuto!")
 
-        g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 29))
+        g_bot.packtpub_free_learning(message, now=datetime.utcfromtimestamp(ts - 29) - _3h)
         self._assert_packtpub_free_learning(bot.calls[-1], message, warning="\n\nFaltam menos de 30 segundos!")
 
     def test_changelog(self):

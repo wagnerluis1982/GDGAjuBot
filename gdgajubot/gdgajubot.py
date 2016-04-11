@@ -146,10 +146,11 @@ class GDGAjuBot:
                 (3600, '1 hora'))
 
     def _book_response(self, book, expires, now=None):
+        _3h = datetime.timedelta(hours=3)
         if now is None:
-            now = datetime.datetime.now()
+            now = datetime.datetime.utcnow() - _3h
 
-        delta = datetime.datetime.utcfromtimestamp(expires - 3*3600) - now
+        delta = (datetime.datetime.utcfromtimestamp(expires) - _3h) - now
         seconds = delta.total_seconds()
 
         response = "O livro de hoje é: [%s](https://www.packtpub.com/packt/offers/free-learning)" % book
