@@ -45,7 +45,7 @@ def update_deploy_bot():
     if request.form['token'] == RESTART_TOKEN:
         try:
             result_git = git_pull()
-            result_restart = supervisorctl('restart gdgajubot')
+            result_restart = supervisorctl('reload')
             if result_git == 0 and result_restart == 0:
                 return redirect(url_for('index', message='Bot atualizado'))
         except Exception as e:
