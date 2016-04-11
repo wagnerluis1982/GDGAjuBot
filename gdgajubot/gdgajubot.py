@@ -236,6 +236,7 @@ def main():
     parser.add_argument('-t', '--telegram_token', help='Token da API do Telegram')
     parser.add_argument('-m', '--meetup_key', help='Key da API do Meetup')
     parser.add_argument('-g', '--group_name', help='Grupo do Meetup')
+    parser.add_argument('-d', '--dev', help='Indicador de Debug/Dev mode. Valores: True/False')
     namespace = parser.parse_args()
 
     # Mounting config
@@ -251,8 +252,10 @@ def main():
 
     # Starting bot
     logging.info("Iniciando bot")
-    logging.info("Usando telegram_token=%s" % (_config["telegram_token"]))
-    logging.info("Usando meetup_key=%s" % (_config["meetup_key"]))
+    if _config["dev"].lower() == "true":
+        logging.info("Dev mode activated.")
+        logging.info("Usando telegram_token=%s" % (_config["telegram_token"]))
+        logging.info("Usando meetup_key=%s" % (_config["meetup_key"]))
     bot = telebot.TeleBot(_config['telegram_token'])
     resources = Resources(_config)
     gdgbot = GDGAjuBot(bot, resources, _config)
