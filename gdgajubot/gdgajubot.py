@@ -139,6 +139,12 @@ class GDGAjuBot:
         self._smart_reply(message, self._book_response(book, expires, now),
                           parse_mode="Markdown", disable_web_page_preview=True)
 
+    timeleft = ((30, '30 segundos'),
+                (60, '1 minuto'),
+                (600, '10 minutos'),
+                (1800, 'meia hora'),
+                (3600, '1 hora'))
+
     def _book_response(self, book, expires, now=None):
         if now is None:
             now = datetime.datetime.now()
@@ -146,21 +152,12 @@ class GDGAjuBot:
         delta = datetime.datetime.utcfromtimestamp(expires - 3*3600) - now
         seconds = delta.total_seconds()
 
-        warning = "\n\nFaltam menos de %s!"
-        if seconds <= 30:
-            warning %= '30 segundos'
-        elif seconds <= 60:
-            warning %= '1 minuto'
-        elif seconds <= 600:
-            warning %= '10 minutos'
-        elif seconds <= 1800:
-            warning %= 'meia hora'
-        elif seconds <= 3600:
-            warning %= '1 hora'
-        else:
-            warning = ''
-
-        return "O livro de hoje é: [%s](https://www.packtpub.com/packt/offers/free-learning)" % book + warning
+        response = "O livro de hoje é: [%s](https://www.packtpub.com/packt/offers/free-learning)" % book
+        for num, in_words in self.timeleft:
+            if seconds <= num:
+                warning = "\n\nFaltam menos de %s!" % in_words
+                return response + warning
+        return response
 
     def _smart_reply(self, message, text, **kwargs):
         # On groups or supergroups, check if I have a recent previous response to refer
