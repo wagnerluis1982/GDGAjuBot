@@ -1,3 +1,4 @@
+import datetime
 import logging
 import re
 
@@ -48,3 +49,33 @@ def extract_command(text):
     match = match_command(text)
     if match:
         return match.group(1).split()[0].split('@')[0]
+
+
+class TimeZone:
+    class TZ(datetime.tzinfo):
+        ZERO = datetime.timedelta(0)
+
+        def __init__(self, hours):
+            self._utcoffset = datetime.timedelta(hours=hours)
+            self._tzname = 'GMT%d' % hours
+
+        def utcoffset(self, dt):
+            return self._utcoffset
+
+        def tzname(self, dt):
+            return self._tzname
+
+        def dst(self, dt):
+            return self.ZERO
+
+    # cache de fusos horários
+    timezones = {}
+
+    @classmethod
+    def gmt(cls, hours):
+        if hours not in cls.timezones:
+            cls.timezones[hours] = cls.TZ(hours)
+        return cls.timezones[hours]
+
+# aliases úteis
+AJU_TZ = TimeZone.gmt(-3)

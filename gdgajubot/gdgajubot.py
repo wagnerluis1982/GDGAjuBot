@@ -121,9 +121,7 @@ class GDGAjuBot:
             # So we format it!
             if isinstance(event['time'], int):
                 # convert time returned by Meetup API
-                event_dt = datetime.datetime.utcfromtimestamp(event['time'] / 1000)
-                # adjust time to UTC-3
-                event_dt -= datetime.timedelta(hours=3)
+                event_dt = datetime.datetime.fromtimestamp(event['time'] / 1000, tz=util.AJU_TZ)
 
                 # create a pretty-looking date
                 event['time'] = event_dt.strftime('%d/%m %H:%M')
@@ -146,11 +144,10 @@ class GDGAjuBot:
                 (3600, '1 hora'))
 
     def _book_response(self, book, expires, now=None):
-        _3h = datetime.timedelta(hours=3)
         if now is None:
-            now = datetime.datetime.utcnow() - _3h
+            now = datetime.datetime.now(tz=util.AJU_TZ)
 
-        delta = (datetime.datetime.utcfromtimestamp(expires) - _3h) - now
+        delta = datetime.datetime.fromtimestamp(expires, tz=util.AJU_TZ) - now
         seconds = delta.total_seconds()
 
         response = "O livro de hoje é: [%s](https://www.packtpub.com/packt/offers/free-learning)" % book
@@ -233,10 +230,20 @@ def main():
     # Configuring bot parameters
     logging.info("Configurando parâmetros")
     parser = argparse.ArgumentParser(description='Bot do GDG Aracaju')
-    parser.add_argument('-t', '--telegram_token', help='Token da API do Telegram')
-    parser.add_argument('-m', '--meetup_key', help='Key da API do Meetup')
-    parser.add_argument('-g', '--group_name', help='Grupo do Meetup')
-    parser.add_argument('-d', '--dev', help='Indicador de Debug/Dev mode. Valores: True/False')
+    parser.add_argument('-t', '--telegram_token', help='Token da API do Telegram', required=True)
+    parser.add_argument('-m', '--meetup_key', help='Key da API do Meetup', required=True)
+    parser.add_argument('-g', '--group_name', help='Grupo do Meetup', required=True)
+    parser.add_argument('-d', '--dev', help='Indicador de Debug/Dev mode', action='store_true')
+    parser.add_argument('--no-dev', help=argparse.SUPPRESS, dest='dev', action='store_false')
+
+    # Get required arguments to check after parsed
+    required_actions = []
+    for action in parser._actions:
+        if action.required:
+            required_actions.append(action)
+            action.required = False
+
+    # Parse command line args
     namespace = parser.parse_args()
 
     # Mounting config
@@ -244,15 +251,13 @@ def main():
                for k, v in vars(namespace).items()}
 
     # Verifying required arguments
-    missing_args = [k.upper() for k, v in _config.items() if not v]
+    missing_args = [argparse._get_action_name(a) for a in required_actions if not _config[a.dest]]
     if missing_args:
-        import sys
-        print("error: missing arguments:", ", ".join(missing_args), file=sys.stderr)
-        exit(1)
+        parser.error("missing arguments: " + ", ".join(missing_args))
 
     # Starting bot
     logging.info("Iniciando bot")
-    if _config["dev"].lower() == "true":
+    if _config["dev"]:
         logging.info("Dev mode activated.")
         logging.info("Usando telegram_token=%s" % (_config["telegram_token"]))
         logging.info("Usando meetup_key=%s" % (_config["meetup_key"]))
