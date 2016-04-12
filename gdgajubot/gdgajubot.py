@@ -121,9 +121,7 @@ class GDGAjuBot:
             # So we format it!
             if isinstance(event['time'], int):
                 # convert time returned by Meetup API
-                event_dt = datetime.datetime.utcfromtimestamp(event['time'] / 1000)
-                # adjust time to UTC-3
-                event_dt -= datetime.timedelta(hours=3)
+                event_dt = datetime.datetime.fromtimestamp(event['time'] / 1000, tz=util.AJU_TZ)
 
                 # create a pretty-looking date
                 event['time'] = event_dt.strftime('%d/%m %H:%M')
@@ -146,11 +144,10 @@ class GDGAjuBot:
                 (3600, '1 hora'))
 
     def _book_response(self, book, expires, now=None):
-        _3h = datetime.timedelta(hours=3)
         if now is None:
-            now = datetime.datetime.utcnow() - _3h
+            now = datetime.datetime.now(tz=util.AJU_TZ)
 
-        delta = (datetime.datetime.utcfromtimestamp(expires) - _3h) - now
+        delta = datetime.datetime.fromtimestamp(expires, tz=util.AJU_TZ) - now
         seconds = delta.total_seconds()
 
         response = "O livro de hoje é: [%s](https://www.packtpub.com/packt/offers/free-learning)" % book
