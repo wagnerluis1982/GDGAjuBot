@@ -233,7 +233,8 @@ def main():
     parser.add_argument('-t', '--telegram_token', help='Token da API do Telegram', required=True)
     parser.add_argument('-m', '--meetup_key', help='Key da API do Meetup', required=True)
     parser.add_argument('-g', '--group_name', help='Grupo do Meetup', required=True)
-    parser.add_argument('-d', '--dev', help='Indicador de Debug/Dev mode. Valores: True/False')
+    parser.add_argument('-d', '--dev', help='Indicador de Debug/Dev mode', action='store_true')
+    parser.add_argument('--no-dev', help=argparse.SUPPRESS, dest='dev', action='store_false')
 
     # Get required arguments to check after parsed
     required_actions = []
@@ -256,7 +257,7 @@ def main():
 
     # Starting bot
     logging.info("Iniciando bot")
-    if _config["dev"].lower() == "true":
+    if _config["dev"]:
         logging.info("Dev mode activated.")
         logging.info("Usando telegram_token=%s" % (_config["telegram_token"]))
         logging.info("Usando meetup_key=%s" % (_config["meetup_key"]))
