@@ -31,7 +31,7 @@ class Resources:
     def __init__(self, config):
         self.config = config
 
-    @cache.cache('get_events', expire=600)
+    @cache.cache('get_events', expire=60)
     def get_events(self, list_size=5):
         return list(self.generate_events(list_size))
 
