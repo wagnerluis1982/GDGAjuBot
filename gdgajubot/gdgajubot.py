@@ -140,6 +140,9 @@ class GDGAjuBot:
             if response:
                 break
             Resources.cache.invalidate(Resources.get_packt_free_book, "get_packt_free_book")
+        # As tentativas falharam...
+        else:
+            response = "O livro de hoje ainda não está disponível"
         self._smart_reply(message, response,
                           parse_mode="Markdown", disable_web_page_preview=True)
 
