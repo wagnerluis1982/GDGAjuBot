@@ -31,7 +31,7 @@ class Resources:
     def __init__(self, config):
         self.config = config
 
-    @cache.cache('get_events', expire=600)
+    @cache.cache('get_events', expire=60)
     def get_events(self, list_size=5):
         return list(self.generate_events(list_size))
 
@@ -133,8 +133,17 @@ class GDGAjuBot:
     def packtpub_free_learning(self, message, now=None):
         """Retorna o livro disponível no free-learning da editora PacktPub."""
         logging.info("%s: %s" % (message.from_user.username, "/book"))
-        book, expires = self.resources.get_packt_free_book()
-        self._smart_reply(message, self._book_response(book, expires, now),
+        # Faz duas tentativas para obter o livro do dia, por questões de possível cache antigo.
+        for _ in range(2):
+            book, expires = self.resources.get_packt_free_book()
+            response = self._book_response(book, expires, now)
+            if response:
+                break
+            Resources.cache.invalidate(Resources.get_packt_free_book, "get_packt_free_book")
+        # As tentativas falharam...
+        else:
+            response = "O livro de hoje ainda não está disponível"
+        self._smart_reply(message, response,
                           parse_mode="Markdown", disable_web_page_preview=True)
 
     timeleft = ((30, '30 segundos'),
@@ -149,6 +158,8 @@ class GDGAjuBot:
 
         delta = datetime.datetime.fromtimestamp(expires, tz=util.AJU_TZ) - now
         seconds = delta.total_seconds()
+        if seconds < 0:
+            return
 
         response = "O livro de hoje é: [%s](https://www.packtpub.com/packt/offers/free-learning)" % book
         for num, in_words in self.timeleft:
