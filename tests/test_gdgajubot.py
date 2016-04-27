@@ -2,6 +2,7 @@
 import unittest
 import os
 from datetime import datetime
+from unittest import mock
 
 from gdgajubot import gdgajubot
 from gdgajubot.util import AJU_TZ
@@ -19,24 +20,9 @@ class MetaCall:
 # Usado nos testes para identificar o método chamado (nome e argumentos)
 CALL = MetaCall()
 
-
-class MockTeleBot:
-    calls = []
-
-    # Registra cada método chamado da classe
-    def __getattr__(self, item):
-        def _call(*args, **kwargs):
-            self.calls.append(CALL(item, *args, **kwargs))
-        return _call
-
-
-class MockMessage:
-    def __init__(self, **kwargs):
-        self.__dict__.update(**kwargs)
-
-    # Método definido para não ter AttributeError
-    def __getattr__(self, item):
-        return self
+# Aliases
+MockTeleBot = mock.NonCallableMock
+MockMessage = mock.NonCallableMock
 
 
 class MockResources:
@@ -108,7 +94,7 @@ class TestGDGAjuBot(unittest.TestCase):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
         g_bot = gdgajubot.GDGAjuBot(bot, resources, self.config)
         g_bot.send_welcome(message)
-        self._assert_send_welcome(bot.calls[-1], message)
+        self._assert_send_welcome(bot.method_calls[-1], message)
 
     def test_list_upcoming_events(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
@@ -116,12 +102,12 @@ class TestGDGAjuBot(unittest.TestCase):
         g_bot.list_upcoming_events(message)
 
         # Verifica se o response criado está correto
-        self._assert_list_upcoming_events(bot.calls[-1], message)
+        self._assert_list_upcoming_events(bot.method_calls[-1], message)
 
         # Garante que o cache mutável não gerará uma exceção
-        n_calls = len(bot.calls)
+        n_calls = len(bot.method_calls)
         g_bot.list_upcoming_events(message)
-        self.assertGreater(len(bot.calls), n_calls)
+        self.assertGreater(len(bot.method_calls), n_calls)
 
     def test_packtpub_free_learning(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
@@ -130,29 +116,29 @@ class TestGDGAjuBot(unittest.TestCase):
 
         # Sem warning
         g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 10*3600, tz=AJU_TZ))
-        self._assert_packtpub_free_learning(bot.calls[-1], message)
+        self._assert_packtpub_free_learning(bot.method_calls[-1], message)
 
         # Os próximos testes verificam cada um dos warnings
         g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 59*60, tz=AJU_TZ))
-        self._assert_packtpub_free_learning(bot.calls[-1], message, warning="\n\nFaltam menos de 1 hora!")
+        self._assert_packtpub_free_learning(bot.method_calls[-1], message, warning="\n\nFaltam menos de 1 hora!")
 
         g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 29*60, tz=AJU_TZ))
-        self._assert_packtpub_free_learning(bot.calls[-1], message, warning="\n\nFaltam menos de meia hora!")
+        self._assert_packtpub_free_learning(bot.method_calls[-1], message, warning="\n\nFaltam menos de meia hora!")
 
         g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 9*60, tz=AJU_TZ))
-        self._assert_packtpub_free_learning(bot.calls[-1], message, warning="\n\nFaltam menos de 10 minutos!")
+        self._assert_packtpub_free_learning(bot.method_calls[-1], message, warning="\n\nFaltam menos de 10 minutos!")
 
         g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 59, tz=AJU_TZ))
-        self._assert_packtpub_free_learning(bot.calls[-1], message, warning="\n\nFaltam menos de 1 minuto!")
+        self._assert_packtpub_free_learning(bot.method_calls[-1], message, warning="\n\nFaltam menos de 1 minuto!")
 
         g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 29, tz=AJU_TZ))
-        self._assert_packtpub_free_learning(bot.calls[-1], message, warning="\n\nFaltam menos de 30 segundos!")
+        self._assert_packtpub_free_learning(bot.method_calls[-1], message, warning="\n\nFaltam menos de 30 segundos!")
 
     def test_changelog(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage(id=0xB00B)
         g_bot = gdgajubot.GDGAjuBot(bot, resources, self.config)
         g_bot.changelog(message)
-        self._assert_changelog(bot.calls[-1], message)
+        self._assert_changelog(bot.method_calls[-1], message)
 
     def _assert_send_welcome(self, called, message):
         self.assertEqual(called,
@@ -187,9 +173,9 @@ class TestGDGAjuBot(unittest.TestCase):
         # Mensagens privadas não fazem link
         message.chat.type = "private"
         g_bot._smart_reply(message, text)
-        self.assertEqual(bot.calls[-1], CALL.reply_to(message, text))
+        self.assertEqual(bot.method_calls[-1], CALL.reply_to(message, text))
         g_bot._smart_reply(message, text)
-        self.assertEqual(bot.calls[-1], CALL.reply_to(message, text))
+        self.assertEqual(bot.method_calls[-1], CALL.reply_to(message, text))
 
         # Alterando MockTeleBot reply_to para retornar um MockMessage com um message_id
         def _reply_to(*args):
@@ -200,10 +186,10 @@ class TestGDGAjuBot(unittest.TestCase):
         # Mensagens de grupo fazem link
         message.chat.type = "group"
         g_bot._smart_reply(message, text)
-        self.assertEqual(bot.calls[-1], CALL.reply_to(message, text))
+        self.assertEqual(bot.method_calls[-1], CALL.reply_to(message, text))
         g_bot._smart_reply(message, text)
-        self.assertEqual(bot.calls[-1], CALL.send_message(message.chat.id, "Clique para ver a última resposta",
-                                                          reply_to_message_id=82))
+        self.assertEqual(bot.method_calls[-1], CALL.send_message(message.chat.id, "Clique para ver a última resposta",
+                                                                 reply_to_message_id=82))
 
     # Routing test
 
@@ -223,7 +209,7 @@ class TestGDGAjuBot(unittest.TestCase):
                     for i, cmd in enumerate(commands_asserts)]
         for i, _assert in enumerate(commands_asserts.values()):
             g_bot.handle_messages(messages[i:i+1])
-            _assert(bot.calls[-1], messages[i])
+            _assert(bot.method_calls[-1], messages[i])
 
         # test qualifying commands text
         commands_asserts = {
@@ -237,7 +223,7 @@ class TestGDGAjuBot(unittest.TestCase):
                     for i, cmd in enumerate(commands_asserts)]
         for i, _assert in enumerate(commands_asserts.values()):
             g_bot.handle_messages(messages[i:i+1])
-            _assert(bot.calls[-1], messages[i])
+            _assert(bot.method_calls[-1], messages[i])
 
 
 class TestResources(unittest.TestCase):
