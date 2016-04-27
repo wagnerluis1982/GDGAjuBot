@@ -1,8 +1,4 @@
 # -*- coding: utf-8 -*-
-import sys
-
-sys.path.append('../')
-
 import unittest
 import os
 from datetime import datetime
