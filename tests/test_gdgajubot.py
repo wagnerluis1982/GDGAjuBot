@@ -130,9 +130,11 @@ class TestGDGAjuBot(unittest.TestCase):
         self._assert_changelog(bot, message)
 
     def _assert_send_welcome(self, bot, message):
+        self._assert_mockbot(bot)
         bot.reply_to.assert_called_with(message, "Este bot faz buscas no Meetup do Test-Bot")
 
     def _assert_list_upcoming_events(self, bot, message):
+        self._assert_mockbot(bot)
         r = ("[Hackeando sua Carreira #Hangout](http://www.meetup.com/GDG-Aracaju/events/229313880/): 30/03 20:00\n"
              "[Android Jam 2: Talks Dia 2](http://www.meetup.com/GDG-Aracaju/events/229623381/): 02/04 13:00\n"
              "[Coding Dojo](http://www.meetup.com/GDG-Aracaju/events/mwnsrlyvgbjb/): 06/04 19:00\n"
@@ -141,12 +143,17 @@ class TestGDGAjuBot(unittest.TestCase):
         bot.reply_to.assert_called_with(message, r, parse_mode="Markdown", disable_web_page_preview=True)
 
     def _assert_packtpub_free_learning(self, bot, message, warning=''):
+        self._assert_mockbot(bot)
         r = "O livro de hoje é: [Android 2099](https://www.packtpub.com/packt/offers/free-learning)" + warning
         bot.reply_to.assert_called_with(message, r, parse_mode="Markdown", disable_web_page_preview=True)
 
     def _assert_changelog(self, bot, message):
+        self._assert_mockbot(bot)
         r = "https://github.com/GDGAracaju/GDGAjuBot/blob/master/CHANGELOG.md"
         bot.send_message.assert_called_with(message.chat.id, r)
+
+    def _assert_mockbot(self, bot):
+        self.assertIsInstance(bot, MockTeleBot)
 
     # Internals tests
 
