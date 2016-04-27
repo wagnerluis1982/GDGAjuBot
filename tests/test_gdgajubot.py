@@ -26,33 +26,34 @@ MockMessage = mock.NonCallableMock
 
 
 class MockResources:
-    # Falso cache de eventos
-    cache_events = [
-        {'link': 'http://www.meetup.com/GDG-Aracaju/events/229313880/',
-         'name': 'Hackeando sua Carreira #Hangout',
-         'time': 1459378800000},
-        {'link': 'http://www.meetup.com/GDG-Aracaju/events/229623381/',
-         'name': 'Android Jam 2: Talks Dia 2',
-         'time': 1459612800000},
-        {'link': 'http://www.meetup.com/GDG-Aracaju/events/mwnsrlyvgbjb/',
-         'name': 'Coding Dojo',
-         'time': 1459980000000},
-        {'link': 'http://www.meetup.com/GDG-Aracaju/events/229591464/',
-         'name': 'O Caminho para uma Arquitetura Elegante #Hangout',
-         'time': 1460160000000},
-        {'link': 'http://www.meetup.com/GDG-Aracaju/events/229770309/',
-         'name': 'Android Jam 2: #Curso Dia 2',
-         'time': 1460217600000},
-        {'link': 'http://www.meetup.com/GDG-Aracaju/events/mwnsrlyvhbgb/',
-         'name': 'Coding Dojo',
-         'time': 1462399200000},
-        {'link': 'http://www.meetup.com/GDG-Aracaju/events/229951204/',
-         'name': 'Google I/O Extended',
-         'time': 1463587200000},
-        {'link': 'http://www.meetup.com/GDG-Aracaju/events/229951264/',
-         'name': 'Google IO Extended 2016',
-         'time': 1463608800000},
-    ]
+    def __init__(self):
+        # Falso cache de eventos
+        self.cache_events = [
+            {'link': 'http://www.meetup.com/GDG-Aracaju/events/229313880/',
+             'name': 'Hackeando sua Carreira #Hangout',
+             'time': 1459378800000},
+            {'link': 'http://www.meetup.com/GDG-Aracaju/events/229623381/',
+             'name': 'Android Jam 2: Talks Dia 2',
+             'time': 1459612800000},
+            {'link': 'http://www.meetup.com/GDG-Aracaju/events/mwnsrlyvgbjb/',
+             'name': 'Coding Dojo',
+             'time': 1459980000000},
+            {'link': 'http://www.meetup.com/GDG-Aracaju/events/229591464/',
+             'name': 'O Caminho para uma Arquitetura Elegante #Hangout',
+             'time': 1460160000000},
+            {'link': 'http://www.meetup.com/GDG-Aracaju/events/229770309/',
+             'name': 'Android Jam 2: #Curso Dia 2',
+             'time': 1460217600000},
+            {'link': 'http://www.meetup.com/GDG-Aracaju/events/mwnsrlyvhbgb/',
+             'name': 'Coding Dojo',
+             'time': 1462399200000},
+            {'link': 'http://www.meetup.com/GDG-Aracaju/events/229951204/',
+             'name': 'Google I/O Extended',
+             'time': 1463587200000},
+            {'link': 'http://www.meetup.com/GDG-Aracaju/events/229951264/',
+             'name': 'Google IO Extended 2016',
+             'time': 1463608800000},
+        ]
 
     def get_events(self, n):
         return self.cache_events[:n]
