@@ -8,18 +8,6 @@ from gdgajubot import gdgajubot
 from gdgajubot.util import AJU_TZ
 
 
-class MetaCall:
-    def __call__(self, item, *args, **kwargs):
-        return item, args, kwargs
-
-    def __getattr__(self, item):
-        def _call(*args, **kwargs):
-            return self(item, *args, **kwargs)
-        return _call
-
-# Usado nos testes para identificar o método chamado (nome e argumentos)
-CALL = MetaCall()
-
 # Aliases
 MockTeleBot = mock.NonCallableMock
 MockMessage = mock.NonCallableMock
@@ -95,7 +83,7 @@ class TestGDGAjuBot(unittest.TestCase):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
         g_bot = gdgajubot.GDGAjuBot(bot, resources, self.config)
         g_bot.send_welcome(message)
-        self._assert_send_welcome(bot.method_calls[-1], message)
+        self._assert_send_welcome(bot, message)
 
     def test_list_upcoming_events(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
@@ -103,7 +91,7 @@ class TestGDGAjuBot(unittest.TestCase):
         g_bot.list_upcoming_events(message)
 
         # Verifica se o response criado está correto
-        self._assert_list_upcoming_events(bot.method_calls[-1], message)
+        self._assert_list_upcoming_events(bot, message)
 
         # Garante que o cache mutável não gerará uma exceção
         n_calls = len(bot.method_calls)
@@ -117,51 +105,48 @@ class TestGDGAjuBot(unittest.TestCase):
 
         # Sem warning
         g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 10*3600, tz=AJU_TZ))
-        self._assert_packtpub_free_learning(bot.method_calls[-1], message)
+        self._assert_packtpub_free_learning(bot, message)
 
         # Os próximos testes verificam cada um dos warnings
         g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 59*60, tz=AJU_TZ))
-        self._assert_packtpub_free_learning(bot.method_calls[-1], message, warning="\n\nFaltam menos de 1 hora!")
+        self._assert_packtpub_free_learning(bot, message, warning="\n\nFaltam menos de 1 hora!")
 
         g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 29*60, tz=AJU_TZ))
-        self._assert_packtpub_free_learning(bot.method_calls[-1], message, warning="\n\nFaltam menos de meia hora!")
+        self._assert_packtpub_free_learning(bot, message, warning="\n\nFaltam menos de meia hora!")
 
         g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 9*60, tz=AJU_TZ))
-        self._assert_packtpub_free_learning(bot.method_calls[-1], message, warning="\n\nFaltam menos de 10 minutos!")
+        self._assert_packtpub_free_learning(bot, message, warning="\n\nFaltam menos de 10 minutos!")
 
         g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 59, tz=AJU_TZ))
-        self._assert_packtpub_free_learning(bot.method_calls[-1], message, warning="\n\nFaltam menos de 1 minuto!")
+        self._assert_packtpub_free_learning(bot, message, warning="\n\nFaltam menos de 1 minuto!")
 
         g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 29, tz=AJU_TZ))
-        self._assert_packtpub_free_learning(bot.method_calls[-1], message, warning="\n\nFaltam menos de 30 segundos!")
+        self._assert_packtpub_free_learning(bot, message, warning="\n\nFaltam menos de 30 segundos!")
 
     def test_changelog(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage(id=0xB00B)
         g_bot = gdgajubot.GDGAjuBot(bot, resources, self.config)
         g_bot.changelog(message)
-        self._assert_changelog(bot.method_calls[-1], message)
+        self._assert_changelog(bot, message)
 
-    def _assert_send_welcome(self, called, message):
-        self.assertEqual(called,
-                         CALL.reply_to(message, "Este bot faz buscas no Meetup do Test-Bot"))
+    def _assert_send_welcome(self, bot, message):
+        bot.reply_to.assert_called_with(message, "Este bot faz buscas no Meetup do Test-Bot")
 
-    def _assert_list_upcoming_events(self, called, message):
+    def _assert_list_upcoming_events(self, bot, message):
         r = ("[Hackeando sua Carreira #Hangout](http://www.meetup.com/GDG-Aracaju/events/229313880/): 30/03 20:00\n"
              "[Android Jam 2: Talks Dia 2](http://www.meetup.com/GDG-Aracaju/events/229623381/): 02/04 13:00\n"
              "[Coding Dojo](http://www.meetup.com/GDG-Aracaju/events/mwnsrlyvgbjb/): 06/04 19:00\n"
              "[O Caminho para uma Arquitetura Elegante #Hangout](http://www.meetup.com/GDG-Aracaju/events/229591464/): 08/04 21:00\n"
              "[Android Jam 2: #Curso Dia 2](http://www.meetup.com/GDG-Aracaju/events/229770309/): 09/04 13:00")
-        self.assertEqual(called,
-                         CALL.reply_to(message, r, parse_mode="Markdown", disable_web_page_preview=True))
+        bot.reply_to.assert_called_with(message, r, parse_mode="Markdown", disable_web_page_preview=True)
 
-    def _assert_packtpub_free_learning(self, called, message, warning=''):
+    def _assert_packtpub_free_learning(self, bot, message, warning=''):
         r = "O livro de hoje é: [Android 2099](https://www.packtpub.com/packt/offers/free-learning)" + warning
-        self.assertEqual(called,
-                         CALL.reply_to(message, r, parse_mode="Markdown", disable_web_page_preview=True))
+        bot.reply_to.assert_called_with(message, r, parse_mode="Markdown", disable_web_page_preview=True)
 
-    def _assert_changelog(self, called, message):
+    def _assert_changelog(self, bot, message):
         r = "https://github.com/GDGAracaju/GDGAjuBot/blob/master/CHANGELOG.md"
-        self.assertEqual(called, CALL.send_message(message.chat.id, r))
+        bot.send_message.assert_called_with(message.chat.id, r)
 
     # Internals tests
 
@@ -174,23 +159,20 @@ class TestGDGAjuBot(unittest.TestCase):
         # Mensagens privadas não fazem link
         message.chat.type = "private"
         g_bot._smart_reply(message, text)
-        self.assertEqual(bot.method_calls[-1], CALL.reply_to(message, text))
+        bot.reply_to.assert_called_with(message, text)
         g_bot._smart_reply(message, text)
-        self.assertEqual(bot.method_calls[-1], CALL.reply_to(message, text))
+        bot.reply_to.assert_called_with(message, text)
 
-        # Alterando MockTeleBot reply_to para retornar um MockMessage com um message_id
-        def _reply_to(*args):
-            bot.__getattr__('reply_to')(*args)  # mantém o registro de chamada
-            return MockMessage(message_id=82)
-        bot.reply_to = _reply_to
+        # Configurando MockTeleBot.reply_to() para retornar um MockMessage com um message_id
+        bot.reply_to.return_value = MockMessage(message_id=82)
 
         # Mensagens de grupo fazem link
         message.chat.type = "group"
         g_bot._smart_reply(message, text)
-        self.assertEqual(bot.method_calls[-1], CALL.reply_to(message, text))
+        bot.reply_to.assert_called_with(message, text)
         g_bot._smart_reply(message, text)
-        self.assertEqual(bot.method_calls[-1], CALL.send_message(message.chat.id, "Clique para ver a última resposta",
-                                                                 reply_to_message_id=82))
+        bot.send_message.assert_called_with(message.chat.id, "Clique para ver a última resposta",
+                                            reply_to_message_id=82)
 
     # Routing test
 
@@ -210,7 +192,7 @@ class TestGDGAjuBot(unittest.TestCase):
                     for i, cmd in enumerate(commands_asserts)]
         for i, _assert in enumerate(commands_asserts.values()):
             g_bot.handle_messages(messages[i:i+1])
-            _assert(bot.method_calls[-1], messages[i])
+            _assert(bot, messages[i])
 
         # test qualifying commands text
         commands_asserts = {
@@ -224,7 +206,7 @@ class TestGDGAjuBot(unittest.TestCase):
                     for i, cmd in enumerate(commands_asserts)]
         for i, _assert in enumerate(commands_asserts.values()):
             g_bot.handle_messages(messages[i:i+1])
-            _assert(bot.method_calls[-1], messages[i])
+            _assert(bot, messages[i])
 
 
 class TestResources(unittest.TestCase):
