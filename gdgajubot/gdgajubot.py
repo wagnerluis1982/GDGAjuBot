@@ -124,7 +124,10 @@ class GDGAjuBot:
                 event_dt = datetime.datetime.fromtimestamp(event['time'] / 1000, tz=util.AJU_TZ)
 
                 # create a pretty-looking date
-                event['time'] = event_dt.strftime('%d/%m %H:%M')
+                formatting = '%d/%m %-Hh'
+                if event['time'].minute:
+                    formatting += '%M'
+                event['time'] = event_dt.strftime(formatting)
 
             response.append("[%(name)s](%(link)s): %(time)s" % event)
         return '\n'.join(response)
