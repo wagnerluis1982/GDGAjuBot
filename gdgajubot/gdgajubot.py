@@ -5,6 +5,8 @@ import logging
 import re
 import os
 import datetime
+import time
+import threading
 
 import requests
 import telebot
@@ -79,6 +81,73 @@ class Resources:
         return book.text.strip(), int(expires)
 
 
+class AutoUpdate:
+    def __init__(self, command, description, bot, get_function):
+        self.command = command
+        self.description = description
+        self.bot = bot
+        self.get_function = get_function
+
+        self.interested_users = set()
+        self.iu_lock = threading.RLock()
+        self.polling = threading.Event()
+        self.last_response = util.Atomic()
+
+    def toggle_interest(self, user_id):
+        with self.iu_lock:
+            # Adiciona o usuário à lista de interessados
+            if user_id not in self.interested_users:
+                self.bot.send_message(
+                    user_id,
+                    "Você receberá as atualizações para %s\n\n"
+                    "Para cancelar, envie %s" % (self.description, self.command)
+                )
+                self.interested_users.add(user_id)
+
+                # Envia a primeira mensagem para esse usuário
+                r = self.last_response.get(on_none_f=self.get_function)
+                self.send_update(user_id, r)
+
+                # Se antes da adição não havia nenhum interessado, inicia o polling de atualizações
+                if len(self.interested_users) == 1:
+                    self.start_polling()
+
+            # Remove o usuário da lista de interessados
+            else:
+                self.interested_users.remove(user_id)
+                self.bot.send_message(
+                    user_id,
+                    "Você não receberá mais as atualizações para %s" % self.description
+                )
+
+                # Caso não haja mais interessados, para o polling
+                if len(self.interested_users) == 0:
+                    self.stop_polling()
+
+    def run(self):
+        while self.polling.is_set():
+            time.sleep(60)
+            r = self.get_function()
+            if self.last_response.set(r, on_diff=True):
+                with self.iu_lock:
+                    interested = self.interested_users.copy()
+                for uid in interested:
+                    self.send_update(uid, r)
+
+    def start_polling(self):
+        self.polling.set()
+        threading.Thread(target=self.run).start()
+
+    def stop_polling(self):
+        self.polling.clear()
+        self.last_response.set(None)
+
+    def send_update(self, user_id, response):
+        self.bot.send_message(user_id,
+                              "`%s`: nova atualização 😃\n\n" % self.command + response,
+                              parse_mode="Markdown", disable_web_page_preview=True)
+
+
 # Funções de busca usadas nas easter eggs
 find_ruby = re.compile(r"(?i)\bRUBY\b").search
 find_java = re.compile(r"(?i)\bJAVA\b").search
@@ -94,6 +163,7 @@ class GDGAjuBot:
         self.bot = bot
         self.resources = resources
         self.config = config
+        self.auto_topics = {}
         bot.set_update_listener(self.handle_messages)
 
     @commands('/start', '/help')
@@ -128,6 +198,27 @@ class GDGAjuBot:
 
             response.append("[%(name)s](%(link)s): %(time)s" % event)
         return '\n'.join(response)
+
+    @commands('/auto_book')
+    def auto_book(self, message):
+        logging.info("%s: %s" % (message.from_user.username, "/auto_book"))
+        # Ignore non-private chats
+        if message.chat.type != "private":
+            return
+
+        # Create book topic if needed
+        if "book" not in self.auto_topics:
+            def get_book():
+                book, expires = self.resources.get_packt_free_book()
+                return self._book_response(book, expires)
+            self.auto_topics["book"] = AutoUpdate(
+                command="/auto_book",
+                description="o livro do dia da Packt Publishing",
+                bot=self.bot,
+                get_function=get_book)
+
+        # Toggle user interest
+        self.auto_topics["book"].toggle_interest(message.from_user.id)
 
     @commands('/book')
     def packtpub_free_learning(self, message, now=None):
