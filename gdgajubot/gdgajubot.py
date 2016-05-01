@@ -125,7 +125,7 @@ class GDGAjuBot:
 
                 # create a pretty-looking date
                 formatting = '%d/%m %-Hh'
-                if event['time'].minute:
+                if event_dt.minute:
                     formatting += '%M'
                 event['time'] = event_dt.strftime(formatting)
 
