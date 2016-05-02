@@ -112,6 +112,8 @@ class AutoUpdate:
                 if len(self.interested_users) == 1:
                     self.start_polling()
 
+                return True
+
             # Remove o usuário da lista de interessados
             else:
                 self.interested_users.remove(user_id)
@@ -123,6 +125,8 @@ class AutoUpdate:
                 # Caso não haja mais interessados, para o polling
                 if len(self.interested_users) == 0:
                     self.stop_polling()
+
+                return False
 
     def run(self):
         while self.polling.is_set():
@@ -204,7 +208,6 @@ class GDGAjuBot:
 
     @commands('/auto_book')
     def auto_book(self, message):
-        logging.info("%s: %s" % (message.from_user.username, "/auto_book"))
         # Ignore non-private chats
         if message.chat.type != "private":
             return
@@ -221,7 +224,8 @@ class GDGAjuBot:
                 get_function=get_book)
 
         # Toggle user interest
-        self.auto_topics["book"].toggle_interest(message.from_user.id)
+        sign = self.auto_topics["book"].toggle_interest(message.from_user.id) and '+' or '-'
+        logging.info("%s: %s" % (message.from_user.username, "/auto_book (%s)" % sign))
 
     @commands('/book')
     def packtpub_free_learning(self, message, now=None):
