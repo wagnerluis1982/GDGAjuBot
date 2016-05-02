@@ -1,6 +1,7 @@
 import datetime
 import logging
 import re
+import threading
 
 
 class HandlerHelper:
@@ -79,3 +80,23 @@ class TimeZone:
 
 # aliases úteis
 AJU_TZ = TimeZone.gmt(-3)
+
+
+class Atomic:
+    def __init__(self, value=None):
+        self._value = value
+        self._lock = threading.RLock()
+
+    def set(self, value, on_diff=False):
+        with self._lock:
+            if on_diff:
+                if value == self._value:
+                    return False
+            self._value = value
+            return True
+
+    def get(self, on_none_f=None):
+        with self._lock:
+            if self._value is None:
+                self.set(on_none_f())
+            return self._value
