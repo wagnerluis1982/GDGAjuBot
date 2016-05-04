@@ -112,6 +112,8 @@ class AutoUpdate:
                 if len(self.interested_users) == 1:
                     self.start_polling()
 
+                return True
+
             # Remove o usuário da lista de interessados
             else:
                 self.interested_users.remove(user_id)
@@ -123,6 +125,8 @@ class AutoUpdate:
                 # Caso não haja mais interessados, para o polling
                 if len(self.interested_users) == 0:
                     self.stop_polling()
+
+                return False
 
     def run(self):
         while self.polling.is_set():
@@ -172,6 +176,28 @@ class GDGAjuBot:
         logging.info("/start")
         self.bot.reply_to(message, "Este bot faz buscas no Meetup do %s" % (self.config["group_name"]))
 
+    @commands('/auto_events')
+    def auto_events(self, message):
+        # Ignore non-private chats
+        if message.chat.type != "private":
+            return
+
+        # Create events topic if needed
+        if "events" not in self.auto_topics:
+            def get_events():
+                next_events = self.resources.get_events(5)
+                return self._format_events(next_events)
+
+            self.auto_topics["events"] = AutoUpdate(
+                command="/auto_events",
+                description="os eventos no Meetup do " + self.config["group_name"],
+                bot=self.bot,
+                get_function=get_events)
+
+        # Toggle user interest
+        sign = self.auto_topics["events"].toggle_interest(message.from_user.id) and '+' or '-'
+        logging.info("%s: %s" % (message.from_user.username, "/auto_events (%s)" % sign))
+
     @commands('/events')
     def list_upcoming_events(self, message):
         """Retorna a lista de eventos do Meetup."""
@@ -204,7 +230,6 @@ class GDGAjuBot:
 
     @commands('/auto_book')
     def auto_book(self, message):
-        logging.info("%s: %s" % (message.from_user.username, "/auto_book"))
         # Ignore non-private chats
         if message.chat.type != "private":
             return
@@ -221,7 +246,8 @@ class GDGAjuBot:
                 get_function=get_book)
 
         # Toggle user interest
-        self.auto_topics["book"].toggle_interest(message.from_user.id)
+        sign = self.auto_topics["book"].toggle_interest(message.from_user.id) and '+' or '-'
+        logging.info("%s: %s" % (message.from_user.username, "/auto_book (%s)" % sign))
 
     @commands('/book')
     def packtpub_free_learning(self, message, now=None):
