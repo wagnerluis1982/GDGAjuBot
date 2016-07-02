@@ -16,15 +16,6 @@ from bs4 import BeautifulSoup
 
 from . import util
 
-book_re = re.compile(
-    r'(?s)'  # re.DOTALL
-    r'"deal-of-the-day".*?'             # #deal-of-the-day
-    r'<div[ >].*?<div[ >].*?'           # div div
-    r'<div[ >].*?</div>.*?<div[ >].*?'  # div:nth-of-type(2)
-    r'<span class="packt-js-countdown" data-countdown-to="([0-9]+)"></span>.*?'  # span.packt-js-countdown
-    r'<h2[ >]\s*(.*?)\s*</h2>'          # h2
-)
-
 
 class Resources:
     # Configuring cache
@@ -64,16 +55,7 @@ class Resources:
         if isinstance(content, bytes):  # convert to str
             content = content.decode(encoding)
 
-        # Try to get book with re
-        try:
-            m = book_re.search(content)
-            book = m.group(2)
-            expires = m.group(1)
-            return book, int(expires)
-        except Exception as e:
-            logging.exception(e)
-
-        # Fallback to html parser
+        # Extracting information with html parser
         page = BeautifulSoup(content, 'html.parser')
         dealoftheday = page.select_one('#deal-of-the-day')
         book = dealoftheday.select_one('div div div:nth-of-type(2) div:nth-of-type(2) h2')
