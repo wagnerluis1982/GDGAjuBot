@@ -57,10 +57,14 @@ class Resources:
 
         # Extracting information with html parser
         page = BeautifulSoup(content, 'html.parser')
-        dealoftheday = page.select_one('#deal-of-the-day')
-        book = dealoftheday.select_one('div div div:nth-of-type(2) div:nth-of-type(2) h2')
-        expires = dealoftheday.select_one('span.packt-js-countdown').attrs['data-countdown-to']
-        return book.text.strip(), int(expires)
+        dealoftheday = page.select_one('#deal-of-the-day div div div:nth-of-type(2)')
+
+        book = util.AttributeDict()
+        book['name'] = dealoftheday.select_one('div:nth-of-type(2) h2').text.strip()
+        book['summary'] = dealoftheday.select_one('div:nth-of-type(3)').text.strip()
+        book['expires'] = int(dealoftheday.select_one('span.packt-js-countdown').attrs['data-countdown-to'])
+
+        return book
 
 
 class AutoUpdate:
@@ -219,8 +223,8 @@ class GDGAjuBot:
         # Create book topic if needed
         if "book" not in self.auto_topics:
             def get_book():
-                book, expires = self.resources.get_packt_free_book()
-                return self._book_response(book, expires)
+                book = self.resources.get_packt_free_book()
+                return self._book_response(book.name, book.expires)
             self.auto_topics["book"] = AutoUpdate(
                 command="/auto_book",
                 description="o livro do dia da Packt Publishing",
@@ -237,8 +241,8 @@ class GDGAjuBot:
         logging.info("%s: %s" % (message.from_user.username, "/book"))
         # Faz duas tentativas para obter o livro do dia, por questões de possível cache antigo.
         for _ in range(2):
-            book, expires = self.resources.get_packt_free_book()
-            response = self._book_response(book, expires, now)
+            book = self.resources.get_packt_free_book()
+            response = self._book_response(book.name, book.expires, now)
             if response:
                 break
             Resources.cache.invalidate(Resources.get_packt_free_book, "get_packt_free_book")
