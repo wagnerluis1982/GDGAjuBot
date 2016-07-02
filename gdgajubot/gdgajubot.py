@@ -281,10 +281,15 @@ class GDGAjuBot:
         if seconds < 0:
             return
 
-        response = "O livro de hoje é: [%s](https://www.packtpub.com/packt/offers/free-learning)" % book
+        response = (
+            "Confira o livro gratuito de hoje da Packt Publishing 🎁\n\n"
+            "📖 [%s](https://www.packtpub.com/packt/offers/free-learning)\n"
+            "🔎 <breve resumo>\n"
+        ) % book
+
         for num, in_words in self.timeleft:
             if seconds <= num:
-                warning = "\n\nFaltam menos de %s!" % in_words
+                warning = "⌛️ Menos de %s!" % in_words
                 return response + warning
         return response
 
