@@ -5,7 +5,9 @@ from datetime import datetime
 from unittest import mock
 
 from gdgajubot import gdgajubot
-from gdgajubot.util import AJU_TZ
+from gdgajubot import util
+
+AJU_TZ = util.AJU_TZ
 
 
 # Aliases
@@ -46,12 +48,15 @@ class MockResources:
     def get_events(self, n):
         return self.cache_events[:n]
 
-    # Valores fixos para get_packt_free_book
-    bookname = "Android 2099"
-    bookts = 4091565600
+    # Valor fixo para get_packt_free_book
+    book = util.AttributeDict(
+        name="Android 2099",
+        summary="Good practices with Miguel O’Hara",
+        expires=4091565600,
+    )
 
     def get_packt_free_book(self):
-        return self.bookname, self.bookts
+        return self.book
 
 
 class TestGDGAjuBot(unittest.TestCase):
@@ -101,7 +106,7 @@ class TestGDGAjuBot(unittest.TestCase):
     def test_packtpub_free_learning(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
         g_bot = gdgajubot.GDGAjuBot(bot, resources, self.config)
-        ts = resources.bookts
+        ts = resources.book.expires
 
         # Sem warning
         g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 10*3600, tz=AJU_TZ))
@@ -109,19 +114,19 @@ class TestGDGAjuBot(unittest.TestCase):
 
         # Os próximos testes verificam cada um dos warnings
         g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 59*60, tz=AJU_TZ))
-        self._assert_packtpub_free_learning(bot, message, warning="\n\nFaltam menos de 1 hora!")
+        self._assert_packtpub_free_learning(bot, message, warning="1 hora")
 
         g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 29*60, tz=AJU_TZ))
-        self._assert_packtpub_free_learning(bot, message, warning="\n\nFaltam menos de meia hora!")
+        self._assert_packtpub_free_learning(bot, message, warning="meia hora")
 
         g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 9*60, tz=AJU_TZ))
-        self._assert_packtpub_free_learning(bot, message, warning="\n\nFaltam menos de 10 minutos!")
+        self._assert_packtpub_free_learning(bot, message, warning="10 minutos")
 
         g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 59, tz=AJU_TZ))
-        self._assert_packtpub_free_learning(bot, message, warning="\n\nFaltam menos de 1 minuto!")
+        self._assert_packtpub_free_learning(bot, message, warning="1 minuto")
 
         g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 29, tz=AJU_TZ))
-        self._assert_packtpub_free_learning(bot, message, warning="\n\nFaltam menos de 30 segundos!")
+        self._assert_packtpub_free_learning(bot, message, warning="30 segundos")
 
     def test_changelog(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage(id=0xB00B)
@@ -144,7 +149,11 @@ class TestGDGAjuBot(unittest.TestCase):
 
     def _assert_packtpub_free_learning(self, bot, message, warning=''):
         self._assert_mockbot(bot)
-        r = "O livro de hoje é: [Android 2099](https://www.packtpub.com/packt/offers/free-learning)" + warning
+        warning = '' if not warning else '⌛️ Menos de %s!' % warning
+
+        r = ("Confira o livro gratuito de hoje da Packt Publishing 🎁\n\n"
+             "📖 [Android 2099](https://www.packtpub.com/packt/offers/free-learning)\n"
+             "🔎 Good practices with Miguel O’Hara\n") + warning
         bot.reply_to.assert_called_with(message, r, parse_mode="Markdown", disable_web_page_preview=True)
 
     def _assert_changelog(self, bot, message):
@@ -222,4 +231,6 @@ class TestResources(unittest.TestCase):
     def test_extract_packt_free_book(self):
         content = open(os.path.join(self.cd, 'packtpub-free-learning.html'), 'rb')
         self.assertEqual(gdgajubot.Resources.extract_packt_free_book(content),
-                         ("Oracle Enterprise Manager 12c Administration Cookbook", 1459378800))
+                         {'name': "Oracle Enterprise Manager 12c Administration Cookbook",
+                          'summary': "Over 50 practical recipes to install, configure, and monitor your Oracle setup using Oracle Enterprise Manager",
+                          'expires': 1459378800})

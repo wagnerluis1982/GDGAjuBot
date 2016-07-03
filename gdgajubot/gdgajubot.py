@@ -242,7 +242,7 @@ class GDGAjuBot:
         # Faz duas tentativas para obter o livro do dia, por questões de possível cache antigo.
         for _ in range(2):
             book = self.resources.get_packt_free_book()
-            response = self._book_response(book.name, book.expires, now)
+            response = self._book_response(book, now)
             if response:
                 break
             Resources.cache.invalidate(Resources.get_packt_free_book, "get_packt_free_book")
@@ -258,11 +258,11 @@ class GDGAjuBot:
                 (1800, 'meia hora'),
                 (3600, '1 hora'))
 
-    def _book_response(self, book, expires, now=None):
+    def _book_response(self, book, now=None):
         if now is None:
             now = datetime.datetime.now(tz=util.AJU_TZ)
 
-        delta = datetime.datetime.fromtimestamp(expires, tz=util.AJU_TZ) - now
+        delta = datetime.datetime.fromtimestamp(book.expires, tz=util.AJU_TZ) - now
         seconds = delta.total_seconds()
         if seconds < 0:
             return
@@ -270,8 +270,8 @@ class GDGAjuBot:
         response = (
             "Confira o livro gratuito de hoje da Packt Publishing 🎁\n\n"
             "📖 [%s](https://www.packtpub.com/packt/offers/free-learning)\n"
-            "🔎 <breve resumo>\n"
-        ) % book
+            "🔎 %s\n"
+        ) % (book.name, book.summary)
 
         for num, in_words in self.timeleft:
             if seconds <= num:
