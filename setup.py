@@ -16,8 +16,8 @@ setup(
     install_requires=[
         "Beaker==1.8.0",
         "beautifulsoup4==4.4.1",
-        "pyTelegramBotAPI==1.4.1",
-        "requests==2.5.3",
+        "pyTelegramBotAPI==2.1.3",
+        "requests==2.7.0",
         "Flask==0.10.1",
         "tailer==0.4.1",
     ],
