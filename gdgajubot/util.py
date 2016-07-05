@@ -100,3 +100,8 @@ class Atomic:
             if self._value is None:
                 self.set(on_none_f())
             return self._value
+
+
+class AttributeDict(dict):
+    __getattr__ = dict.__getitem__
+    __setattr__ = dict.__setitem__

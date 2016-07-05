@@ -16,15 +16,6 @@ from bs4 import BeautifulSoup
 
 from . import util
 
-book_re = re.compile(
-    r'(?s)'  # re.DOTALL
-    r'"deal-of-the-day".*?'             # #deal-of-the-day
-    r'<div[ >].*?<div[ >].*?'           # div div
-    r'<div[ >].*?</div>.*?<div[ >].*?'  # div:nth-of-type(2)
-    r'<span class="packt-js-countdown" data-countdown-to="([0-9]+)"></span>.*?'  # span.packt-js-countdown
-    r'<h2[ >]\s*(.*?)\s*</h2>'          # h2
-)
-
 
 class Resources:
     # Configuring cache
@@ -64,21 +55,16 @@ class Resources:
         if isinstance(content, bytes):  # convert to str
             content = content.decode(encoding)
 
-        # Try to get book with re
-        try:
-            m = book_re.search(content)
-            book = m.group(2)
-            expires = m.group(1)
-            return book, int(expires)
-        except Exception as e:
-            logging.exception(e)
-
-        # Fallback to html parser
+        # Extracting information with html parser
         page = BeautifulSoup(content, 'html.parser')
-        dealoftheday = page.select_one('#deal-of-the-day')
-        book = dealoftheday.select_one('div div div:nth-of-type(2) div:nth-of-type(2) h2')
-        expires = dealoftheday.select_one('span.packt-js-countdown').attrs['data-countdown-to']
-        return book.text.strip(), int(expires)
+        dealoftheday = page.select_one('#deal-of-the-day div div div:nth-of-type(2)')
+
+        book = util.AttributeDict()
+        book['name'] = dealoftheday.select_one('div:nth-of-type(2) h2').text.strip()
+        book['summary'] = dealoftheday.select_one('div:nth-of-type(3)').text.strip()
+        book['expires'] = int(dealoftheday.select_one('span.packt-js-countdown').attrs['data-countdown-to'])
+
+        return book
 
 
 class AutoUpdate:
@@ -237,8 +223,8 @@ class GDGAjuBot:
         # Create book topic if needed
         if "book" not in self.auto_topics:
             def get_book():
-                book, expires = self.resources.get_packt_free_book()
-                return self._book_response(book, expires)
+                book = self.resources.get_packt_free_book()
+                return self._book_response(book.name, book.expires)
             self.auto_topics["book"] = AutoUpdate(
                 command="/auto_book",
                 description="o livro do dia da Packt Publishing",
@@ -255,8 +241,8 @@ class GDGAjuBot:
         logging.info("%s: %s" % (message.from_user.username, "/book"))
         # Faz duas tentativas para obter o livro do dia, por questões de possível cache antigo.
         for _ in range(2):
-            book, expires = self.resources.get_packt_free_book()
-            response = self._book_response(book, expires, now)
+            book = self.resources.get_packt_free_book()
+            response = self._book_response(book, now)
             if response:
                 break
             Resources.cache.invalidate(Resources.get_packt_free_book, "get_packt_free_book")
@@ -272,19 +258,24 @@ class GDGAjuBot:
                 (1800, 'meia hora'),
                 (3600, '1 hora'))
 
-    def _book_response(self, book, expires, now=None):
+    def _book_response(self, book, now=None):
         if now is None:
             now = datetime.datetime.now(tz=util.AJU_TZ)
 
-        delta = datetime.datetime.fromtimestamp(expires, tz=util.AJU_TZ) - now
+        delta = datetime.datetime.fromtimestamp(book.expires, tz=util.AJU_TZ) - now
         seconds = delta.total_seconds()
         if seconds < 0:
             return
 
-        response = "O livro de hoje é: [%s](https://www.packtpub.com/packt/offers/free-learning)" % book
+        response = (
+            "Confira o livro gratuito de hoje da Packt Publishing 🎁\n\n"
+            "📖 [%s](https://www.packtpub.com/packt/offers/free-learning)\n"
+            "🔎 %s\n"
+        ) % (book.name, book.summary)
+
         for num, in_words in self.timeleft:
             if seconds <= num:
-                warning = "\n\nFaltam menos de %s!" % in_words
+                warning = "⌛️ Menos de %s!" % in_words
                 return response + warning
         return response
 
