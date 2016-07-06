@@ -58,6 +58,9 @@ class MockResources:
     def get_packt_free_book(self):
         return self.book
 
+    def get_short_url(self, long_url):
+        return long_url
+
 
 class TestGDGAjuBot(unittest.TestCase):
     config = {'group_name': 'Test-Bot'}

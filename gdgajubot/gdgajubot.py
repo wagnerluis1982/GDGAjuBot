@@ -66,6 +66,20 @@ class Resources:
 
         return book
 
+    @cache.cache('get_short_url')
+    def get_short_url(self, long_url):
+        # Faz a requisição da URL curta somente se houver uma key configurada
+        if self.config['url_shortener_key']:
+            r = requests.post("https://www.googleapis.com/urlshortener/v1/url",
+                              params={'key': (self.config['url_shortener_key']),
+                                      'fields': 'id'},
+                              json={'longUrl': long_url})
+            if r.status_code == 200:
+                return r.json()['id']
+
+        # Caso tenha havido algum problema usa a própria URL longa
+        return long_url
+
 
 class AutoUpdate:
     def __init__(self, command, description, bot, get_function):
@@ -228,6 +242,10 @@ class GDGAjuBot:
                     formatting += '%M'
                 event['time'] = event_dt.strftime(formatting)
 
+                # When event['time'] is a timestamp, we also know that event['link'] is a long url.
+                # So we shorten it!
+                event['link'] = self.resources.get_short_url(event['link'])
+
             response.append("[%(name)s](%(link)s): %(time)s" % event)
         return '\n'.join(response)
 
@@ -372,6 +390,7 @@ def main():
     parser.add_argument('-t', '--telegram_token', help='Token da API do Telegram', required=True)
     parser.add_argument('-m', '--meetup_key', help='Key da API do Meetup', required=True)
     parser.add_argument('-g', '--group_name', help='Grupo do Meetup', required=True)
+    parser.add_argument('--url_shortener_key', help='Key da API do URL Shortener')
     parser.add_argument('-d', '--dev', help='Indicador de Debug/Dev mode', action='store_true')
     parser.add_argument('--no-dev', help=argparse.SUPPRESS, dest='dev', action='store_false')
 
