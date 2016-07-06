@@ -79,8 +79,25 @@ class AutoUpdate:
         self.polling = threading.Event()
         self.last_response = util.Atomic()
 
-    def toggle_interest(self, user_id):
+    def toggle_interest(self, user, chat):
         with self.iu_lock:
+            user_id = user.id
+
+            # Verifica se o usuário não é um admin
+            if user.id != chat.id:
+                try:
+                    administrators = self.bot.get_chat_administrators(chat.id)
+                    for admin in administrators:
+                        if admin.user.id == user_id:
+                            user_id = chat.id
+                            break
+                    else:
+                        self.bot.send_message(
+                            chat.id, "%s: %s não é administrador do grupo" % (self.command, user.username))
+                        return
+                except telebot.apihelper.ApiException:
+                    pass
+
             # Adiciona o usuário à lista de interessados
             if user_id not in self.interested_users:
                 self.bot.send_message(
@@ -165,7 +182,7 @@ class GDGAjuBot:
     @commands('/auto_events')
     def auto_events(self, message):
         # Ignore non-private chats
-        if message.chat.type != "private":
+        if message.chat.type == "channel":
             return
 
         # Create events topic if needed
@@ -181,7 +198,7 @@ class GDGAjuBot:
                 get_function=get_events)
 
         # Toggle user interest
-        sign = self.auto_topics["events"].toggle_interest(message.from_user.id) and '+' or '-'
+        sign = self.auto_topics["events"].toggle_interest(message.from_user, message.chat) and '+' or '-'
         logging.info("%s: %s" % (message.from_user.username, "/auto_events (%s)" % sign))
 
     @commands('/events')
@@ -216,15 +233,15 @@ class GDGAjuBot:
 
     @commands('/auto_book')
     def auto_book(self, message):
-        # Ignore non-private chats
-        if message.chat.type != "private":
+        # Ignore channels
+        if message.chat.type == "channel":
             return
 
         # Create book topic if needed
         if "book" not in self.auto_topics:
             def get_book():
                 book = self.resources.get_packt_free_book()
-                return self._book_response(book.name, book.expires)
+                return self._book_response(book)
             self.auto_topics["book"] = AutoUpdate(
                 command="/auto_book",
                 description="o livro do dia da Packt Publishing",
@@ -232,7 +249,7 @@ class GDGAjuBot:
                 get_function=get_book)
 
         # Toggle user interest
-        sign = self.auto_topics["book"].toggle_interest(message.from_user.id) and '+' or '-'
+        sign = self.auto_topics["book"].toggle_interest(message.from_user, message.chat) and '+' or '-'
         logging.info("%s: %s" % (message.from_user.username, "/auto_book (%s)" % sign))
 
     @commands('/book')
