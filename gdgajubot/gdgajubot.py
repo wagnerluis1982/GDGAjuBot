@@ -66,6 +66,20 @@ class Resources:
 
         return book
 
+    @cache.cache('get_short_url')
+    def get_short_url(self, long_url):
+        # Faz a requisição da URL curta somente se houver uma key configurada
+        if self.config['url_shortener_key']:
+            r = requests.post("https://www.googleapis.com/urlshortener/v1/url",
+                              params={'key': (self.config['url_shortener_key']),
+                                      'fields': 'id'},
+                              json={'longUrl': long_url})
+            if r.status_code == 200:
+                return r.json()['id']
+
+        # Caso tenha havido algum problema usa a própria URL longa
+        return long_url
+
 
 class AutoUpdate:
     def __init__(self, command, description, bot, get_function):
@@ -92,9 +106,7 @@ class AutoUpdate:
                             user_id = chat.id
                             break
                     else:
-                        self.bot.send_message(
-                            chat.id, "%s: %s não é administrador do grupo" % (self.command, user.username))
-                        return
+                        return 2
                 except telebot.apihelper.ApiException:
                     pass
 
@@ -115,7 +127,7 @@ class AutoUpdate:
                 if len(self.interested_users) == 1:
                     self.start_polling()
 
-                return True
+                return 1
 
             # Remove o usuário da lista de interessados
             else:
@@ -129,7 +141,7 @@ class AutoUpdate:
                 if len(self.interested_users) == 0:
                     self.stop_polling()
 
-                return False
+                return 0
 
     def run(self):
         while self.polling.is_set():
@@ -198,8 +210,8 @@ class GDGAjuBot:
                 get_function=get_events)
 
         # Toggle user interest
-        sign = self.auto_topics["events"].toggle_interest(message.from_user, message.chat) and '+' or '-'
-        logging.info("%s: %s" % (message.from_user.username, "/auto_events (%s)" % sign))
+        status = self.auto_topics["events"].toggle_interest(message.from_user, message.chat)
+        self._log_autocmd("/events", status, message)
 
     @commands('/events')
     def list_upcoming_events(self, message):
@@ -228,6 +240,10 @@ class GDGAjuBot:
                     formatting += '%M'
                 event['time'] = event_dt.strftime(formatting)
 
+                # When event['time'] is a timestamp, we also know that event['link'] is a long url.
+                # So we shorten it!
+                event['link'] = self.resources.get_short_url(event['link'])
+
             response.append("[%(name)s](%(link)s): %(time)s" % event)
         return '\n'.join(response)
 
@@ -249,8 +265,8 @@ class GDGAjuBot:
                 get_function=get_book)
 
         # Toggle user interest
-        sign = self.auto_topics["book"].toggle_interest(message.from_user, message.chat) and '+' or '-'
-        logging.info("%s: %s" % (message.from_user.username, "/auto_book (%s)" % sign))
+        status = self.auto_topics["book"].toggle_interest(message.from_user, message.chat)
+        self._log_autocmd("/book", status, message)
 
     @commands('/book')
     def packtpub_free_learning(self, message, now=None):
@@ -318,6 +334,13 @@ class GDGAjuBot:
         else:
             self.bot.reply_to(message, text, **kwargs)
 
+    def _log_autocmd(self, command, status, message, signs=('-', '+', '#')):
+        username = message.from_user.username
+        if self.config['dev']:
+            self.bot.reply_to(message, "%s: uso somente para administradores do grupo" % command)
+
+        logging.info("%s: %s" % (username, "/auto_events (%s)" % signs[status]))
+
     @commands('/changelog')
     def changelog(self, message):
         logging.info("%s: %s" % (message.from_user.username, "/changelog"))
@@ -372,6 +395,7 @@ def main():
     parser.add_argument('-t', '--telegram_token', help='Token da API do Telegram', required=True)
     parser.add_argument('-m', '--meetup_key', help='Key da API do Meetup', required=True)
     parser.add_argument('-g', '--group_name', help='Grupo do Meetup', required=True)
+    parser.add_argument('--url_shortener_key', help='Key da API do URL Shortener')
     parser.add_argument('-d', '--dev', help='Indicador de Debug/Dev mode', action='store_true')
     parser.add_argument('--no-dev', help=argparse.SUPPRESS, dest='dev', action='store_false')
 
