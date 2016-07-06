@@ -106,9 +106,7 @@ class AutoUpdate:
                             user_id = chat.id
                             break
                     else:
-                        self.bot.send_message(
-                            chat.id, "%s: %s não é administrador do grupo" % (self.command, user.username))
-                        return
+                        return 2
                 except telebot.apihelper.ApiException:
                     pass
 
@@ -129,7 +127,7 @@ class AutoUpdate:
                 if len(self.interested_users) == 1:
                     self.start_polling()
 
-                return True
+                return 1
 
             # Remove o usuário da lista de interessados
             else:
@@ -143,7 +141,7 @@ class AutoUpdate:
                 if len(self.interested_users) == 0:
                     self.stop_polling()
 
-                return False
+                return 0
 
     def run(self):
         while self.polling.is_set():
@@ -212,8 +210,8 @@ class GDGAjuBot:
                 get_function=get_events)
 
         # Toggle user interest
-        sign = self.auto_topics["events"].toggle_interest(message.from_user, message.chat) and '+' or '-'
-        logging.info("%s: %s" % (message.from_user.username, "/auto_events (%s)" % sign))
+        status = self.auto_topics["events"].toggle_interest(message.from_user, message.chat)
+        self._log_autocmd("/events", status, message)
 
     @commands('/events')
     def list_upcoming_events(self, message):
@@ -267,8 +265,8 @@ class GDGAjuBot:
                 get_function=get_book)
 
         # Toggle user interest
-        sign = self.auto_topics["book"].toggle_interest(message.from_user, message.chat) and '+' or '-'
-        logging.info("%s: %s" % (message.from_user.username, "/auto_book (%s)" % sign))
+        status = self.auto_topics["book"].toggle_interest(message.from_user, message.chat)
+        self._log_autocmd("/book", status, message)
 
     @commands('/book')
     def packtpub_free_learning(self, message, now=None):
@@ -335,6 +333,13 @@ class GDGAjuBot:
         # On private chats or channels, send the normal reply...
         else:
             self.bot.reply_to(message, text, **kwargs)
+
+    def _log_autocmd(self, command, status, message, signs=('-', '+', '#')):
+        username = message.from_user.username
+        if self.config['dev']:
+            self.bot.reply_to(message, "%s: uso somente para administradores do grupo" % command)
+
+        logging.info("%s: %s" % (username, "/auto_events (%s)" % signs[status]))
 
     @commands('/changelog')
     def changelog(self, message):
