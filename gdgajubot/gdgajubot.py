@@ -9,6 +9,7 @@ import time
 import threading
 
 import requests
+import requests.exceptions
 import telebot
 from beaker.cache import CacheManager
 from beaker.util import parse_cache_config_options
@@ -379,7 +380,14 @@ class GDGAjuBot:
                     self.easter_python(message)
 
     def start(self):
-        self.bot.polling(none_stop=True, interval=0, timeout=20)
+        while True:
+            try:
+                self.bot.polling(none_stop=True, interval=0, timeout=20)
+                break
+            except requests.exceptions.RequestException as e:
+                logging.exception(e)
+                logging.info("Reiniciando bot em 10 segundos")
+                time.sleep(10)
 
 
 def main():
