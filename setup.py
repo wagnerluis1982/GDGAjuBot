@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
     name = "gdgajubot",
-    version = "1.2",
+    version = "1.4",
     author = "GDG Aracaju",
     url = "http://site.gdgaracaju.com.br/",
     description = "GDG Aracaju Bot",
