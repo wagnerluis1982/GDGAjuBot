@@ -188,11 +188,22 @@ class GDGAjuBot:
         self.auto_topics = {}
         bot.set_update_listener(self.handle_messages)
 
-    @commands('/start', '/help')
+    @commands('/start')
     def send_welcome(self, message):
         """Mensagem de apresentação do bot."""
         logging.info("/start")
-        self.bot.reply_to(message, "Este bot faz buscas no Meetup do %s" % (self.config["group_name"]))
+        self.bot.reply_to(message, "Olá! Eu sou o bot do %s! Se precisar de ajuda: /help" % (self.config["group_name"]))
+
+    @commands('/help')
+    def help(self, message):
+        """Mensagem de ajuda do bot."""
+        logging.info("/help")
+        self.bot.reply_to(message, 
+            "/help - Exibe essa mensagem.\n" \
+            "/book - Informa o ebook gratuito do dia na Packt Publishing.\n" \
+            "/events - Informa a lista de próximos eventos do GDG Aracaju.\n" \
+            "/auto_book - Atualiza automaticamente sobre ebooks gratuitos na Packt Publishing.\n")
+
 
     @commands('/auto_events')
     def auto_events(self, message):
