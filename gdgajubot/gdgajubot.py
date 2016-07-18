@@ -72,11 +72,13 @@ class Resources:
         # Faz a requisição da URL curta somente se houver uma key configurada
         if self.config['url_shortener_key']:
             r = requests.post("https://www.googleapis.com/urlshortener/v1/url",
-                              params={'key': (self.config['url_shortener_key']),
+                              params={'key': self.config['url_shortener_key'],
                                       'fields': 'id'},
                               json={'longUrl': long_url})
             if r.status_code == 200:
                 return r.json()['id']
+            else:
+                logging.exception(r.text)
 
         # Caso tenha havido algum problema usa a própria URL longa
         return long_url
@@ -236,7 +238,7 @@ class GDGAjuBot:
                 event_dt = datetime.datetime.fromtimestamp(event['time'] / 1000, tz=util.AJU_TZ)
 
                 # create a pretty-looking date
-                formatting = '%d/%m %-Hh'
+                formatting = '%d/%m %Hh'
                 if event_dt.minute:
                     formatting += '%M'
                 event['time'] = event_dt.strftime(formatting)
