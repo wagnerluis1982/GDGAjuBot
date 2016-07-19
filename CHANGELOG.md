@@ -160,7 +160,7 @@
 - [fb1c232](https://github.com/GDGAracaju/GDGAjuBot/commit/fb1c23288813a4d0a131979d8617b770e137003e) Corrige os easter eggs de Java e Ruby (@erickmendonca)
 - [be3f12b](https://github.com/GDGAracaju/GDGAjuBot/commit/be3f12bc816c764b1b74f6de40cba196f61ec436) Atualiza configuração de logging (@erickmendonca)
 - [087d2b2](https://github.com/GDGAracaju/GDGAjuBot/commit/087d2b221d0739f365505bc1d4af9fd0cf3695ff) Atualiza lxml e adiciona aviso no README (@erickmendonca)
-- [a77099a](https://github.com/GDGAracaju/GDGAjuBot/commit/a77099ae0c4c659ce8ca7ceb6b71bcb9ab6b054b) Merge branch 'master' of https://github.com/erickmendonca/GDGAjuBot (@erickmendonca)
+- [a77099a](https://github.com/GDGAracaju/GDGAjuBot/commit/a77099ae0c4c659ce8ca7ceb6b71bcb9ab6b054b) Merge branch 'master' of https://github.com/GDGAracaju/GDGAjuBot (@erickmendonca)
 - [#1](https://github.com/gdgaracaju/gdgajubot/pull/1) Merge pull request #1 from arquimago/patch-1 (@arquimago)
 - [b3695d0](https://github.com/GDGAracaju/GDGAjuBot/commit/b3695d0bdcaea619365d60c644324efa53ebf257) Corrigindo requests para evitar erros (@arquimago)
 
