@@ -3,3 +3,6 @@ gdgajubot.egg-info/
 *.pyc
 bot.log
 .cache
+build/
+dist/
+*.bat
