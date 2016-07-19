@@ -6,4 +6,3 @@ py==1.4.31
 pytest==2.8.5
 six==1.10.0
 wheel==0.26.0
-gunicorn==19.4.5
