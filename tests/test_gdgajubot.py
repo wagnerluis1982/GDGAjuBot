@@ -242,7 +242,7 @@ class TestResources(unittest.TestCase):
     cd = os.path.dirname(__file__)
 
     def test_extract_packt_free_book(self):
-        content = open(os.path.join(self.cd, 'packtpub-free-learning.html'), 'rb')
+        content = open(os.path.join(self.cd, 'packtpub-free-learning.html.fixture'), 'rb')
         self.assertEqual(gdgajubot.Resources.extract_packt_free_book(content),
                          {'name': "Oracle Enterprise Manager 12c Administration Cookbook",
                           'summary': "Over 50 practical recipes to install, configure, and monitor your Oracle setup using Oracle Enterprise Manager",
