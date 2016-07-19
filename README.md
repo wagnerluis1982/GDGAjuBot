@@ -2,8 +2,10 @@
 
 [![Build Status](https://travis-ci.org/GDGAracaju/GDGAjuBot.svg?branch=master)](https://travis-ci.org/GDGAracaju/GDGAjuBot)
 
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
+
 O GDG Aracaju Bot, ou `gdgajubot` é um bot de [Telegram](https://telegram.me/) com a função
-principal de fazer buscas no [Meetup](http://www.meetup.com/).
+principal de informar eventos no [Meetup](http://www.meetup.com/), além de outras.
 
 ## Funcionalidades
 
@@ -12,7 +14,12 @@ O bot atende aos seguintes comandos:
 - `/events`: listagem dos próximos eventos registrados no meetup.
 - `/book`: livro gratuito do dia da editora [Packt Publishing](https://www.packtpub.com/).
 
-Há também alguns recursos escondidos: olhem os fontes!!!
+As seguintes funções estão disponíveis em `beta`:
+
+- `/auto_events`: notifica automaticamente o usuário quando houver novos eventos.
+- `/auto_book`: notifica automaticamente o usuário quando houver um novo livro gratuito.
+
+Há também alguns recursos escondidos: olhem os fontes!
 
 ## Instalação
 
@@ -56,6 +63,10 @@ Para o bot ser iniciado, execute
 onde `TELEGRAM_TOKEN` é o token do seu bot, `MEETUP_KEY` a chave do Meetup e `GROUP_NAME` o nome do
 grupo do Meetup onde o bot irá buscar os eventos.
 
+No Windows, use:
+
+    $ python scripts\gdgajubot
+
 O bot também pode ser executado definindo variáveis de ambiente
 
     $ export TELEGRAM_TOKEN='token do bot'
@@ -68,6 +79,8 @@ para o shell antes de executar:
 
     $ . credenciais_bot
     $ gdgajubot -g 'GROUP_NAME'
+
+Existe um parâmetro opcional que permite encurtar as URLs fornecidas pelo bot: `--url_shortener_key` (ou variável de ambiente `URL_SHORTENER_KEY`). [Para obter essa chave, visite a documentação](https://developers.google.com/url-shortener/v1/getting_started).
 
 ### Testando
 
