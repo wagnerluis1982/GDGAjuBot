@@ -1,0 +1,33 @@
+{
+  "name": "GDG Aracaju Bot",
+  "description": "O GDG Aracaju Bot é um bot de Telegram com a função principal de informar eventos no Meetup",
+  "repository": "https://github.com/GDGAracaju/GDGAjuBot",
+  "logo": "https://node-js-sample.herokuapp.com/node.png",
+  "keywords": ["telegram", "bot", "meetup"],
+  "env": {
+    "TELEGRAM_TOKEN": {
+      "description": "Token da API para bots do Telegram."
+    },
+    "MEETUP_KEY": {
+      "description": "Chave da API do Meetup.com."
+    },
+    "GROUP_NAME": {
+      "description": "Nome do grupo no Meetup.com."
+    },
+    "URL_SHORTENER_KEY": {
+      "description": "Chave da API URL Shortener do Google.",
+      "required": false
+    }
+  },
+  "formation": {
+    "worker": {
+      "quantity": 1,
+      "size": "free"
+    }
+  },
+   "buildpacks": [
+    {
+      "url": "https://github.com/heroku/heroku-buildpack-python"
+    }
+  ]
+}
