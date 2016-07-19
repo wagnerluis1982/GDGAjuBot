@@ -139,7 +139,17 @@ class TestGDGAjuBot(unittest.TestCase):
 
     def _assert_send_welcome(self, bot, message):
         self._assert_mockbot(bot)
-        bot.reply_to.assert_called_with(message, "Este bot faz buscas no Meetup do Test-Bot")
+        bot.reply_to.assert_called_with(message, "Olá! Eu sou o bot do %s! Se precisar de ajuda: /help" % (self.config["group_name"]))
+
+    def _assert_help_message(self, bot, message):
+        self._assert_mockbot(bot)
+        help_message = "/help - Exibe essa mensagem.\n" \
+            "/book - Informa o ebook gratuito do dia na Packt Publishing.\n" \
+            "/events - Informa a lista de próximos eventos do {group_name}.\n" \
+            "/auto_book - Atualiza automaticamente sobre ebooks gratuitos na Packt Publishing.\n" \
+            "/auto_events - Atualiza automaticamente sobre eventos do {group_name}"
+        help_message = help_message.format(group_name=self.config["group_name"])
+        bot.reply_to.assert_called_with(message, help_message)
 
     def _assert_list_upcoming_events(self, bot, message):
         self._assert_mockbot(bot)
@@ -205,7 +215,7 @@ class TestGDGAjuBot(unittest.TestCase):
             '/start': self._assert_send_welcome,
             '/changelog': self._assert_changelog,
             '/book': self._assert_packtpub_free_learning,
-            '/help': self._assert_send_welcome,
+            '/help': self._assert_help_message,
         }
         messages = [MockMessage(id=i, text=cmd, content_type="text")
                     for i, cmd in enumerate(commands_asserts)]
@@ -219,7 +229,7 @@ class TestGDGAjuBot(unittest.TestCase):
             '/start@erickbot': self._assert_send_welcome,
             '/changelog@wagnerbot': self._assert_changelog,
             '/book@brandinibot': self._assert_packtpub_free_learning,
-            '/help@thalesbot': self._assert_send_welcome,
+            '/help@thalesbot': self._assert_help_message,
         }
         messages = [MockMessage(id=i, text=cmd, content_type="text")
                     for i, cmd in enumerate(commands_asserts)]

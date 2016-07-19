@@ -198,11 +198,12 @@ class GDGAjuBot:
     def help(self, message):
         """Mensagem de ajuda do bot."""
         logging.info("/help")
-        self.bot.reply_to(message, 
-            "/help - Exibe essa mensagem.\n" \
+        help_message = "/help - Exibe essa mensagem.\n" \
             "/book - Informa o ebook gratuito do dia na Packt Publishing.\n" \
-            "/events - Informa a lista de próximos eventos do GDG Aracaju.\n" \
-            "/auto_book - Atualiza automaticamente sobre ebooks gratuitos na Packt Publishing.\n")
+            "/events - Informa a lista de próximos eventos do {group_name}.\n" \
+            "/auto_book - Atualiza automaticamente sobre ebooks gratuitos na Packt Publishing.\n" \
+            "/auto_events - Atualiza automaticamente sobre eventos do {group_name}"
+        self.bot.reply_to(message, help_message.format(group_name=self.config["group_name"]))
 
 
     @commands('/auto_events')
