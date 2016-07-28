@@ -442,11 +442,12 @@ def main():
 
     # Starting bot
     logging.info("Iniciando bot")
+    bot = telebot.TeleBot(_config['telegram_token'])
     if _config["dev"]:
         logging.info("Dev mode activated.")
+        logging.info("Usando @%s", bot.get_me().username)
         logging.info("Usando telegram_token=%(telegram_token)s", _config)
         logging.info("Usando meetup_key=%(meetup_key)s", _config)
-    bot = telebot.TeleBot(_config['telegram_token'])
     resources = Resources(_config)
     gdgbot = GDGAjuBot(bot, resources, _config)
     gdgbot.start()
