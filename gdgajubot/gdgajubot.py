@@ -231,7 +231,7 @@ class GDGAjuBot:
     @commands('/events')
     def list_upcoming_events(self, message):
         """Retorna a lista de eventos do Meetup."""
-        logging.info("%s: %s" % (message.from_user.username, "/events"))
+        logging.info("%s: %s", message.from_user.username, "/events")
         try:
             next_events = self.resources.get_events(5)
             response = self._format_events(next_events)
@@ -286,7 +286,7 @@ class GDGAjuBot:
     @commands('/book')
     def packtpub_free_learning(self, message, now=None):
         """Retorna o livro disponível no free-learning da editora PacktPub."""
-        logging.info("%s: %s" % (message.from_user.username, "/book"))
+        logging.info("%s: %s", message.from_user.username, "/book")
         # Faz duas tentativas para obter o livro do dia, por questões de possível cache antigo.
         for _ in range(2):
             book = self.resources.get_packt_free_book()
@@ -354,27 +354,27 @@ class GDGAjuBot:
         if self.config['dev']:
             self.bot.reply_to(message, "%s: uso somente para administradores do grupo" % command)
 
-        logging.info("%s: %s" % (username, "/auto_events (%s)" % signs[status]))
+        logging.info("%s: /auto_events (%s)", username, signs[status])
 
     @commands('/changelog')
     def changelog(self, message):
-        logging.info("%s: %s" % (message.from_user.username, "/changelog"))
+        logging.info("%s: %s", message.from_user.username, "/changelog")
         self.bot.send_message(message.chat.id, "https://github.com/GDGAracaju/GDGAjuBot/blob/master/CHANGELOG.md")
 
     def love_ruby(self, message):
         """Easter Egg com o Ruby."""
-        logging.info("%s: %s" % (message.from_user.username, "ruby"))
+        logging.info("%s: %s", message.from_user.username, "ruby")
         username = message.from_user.username
         self.bot.send_message(message.chat.id, username + " ama Ruby <3")
 
     def memory_java(self, message):
         """Easter Egg com o Java."""
-        logging.info("%s: %s" % (message.from_user.username, "java"))
+        logging.info("%s: %s", message.from_user.username, "java")
         self.bot.send_message(message.chat.id, "Ihh... acabou a RAM")
 
     def easter_python(self, message):
         """Easter Egg com o Python."""
-        logging.info("%s: %s" % (message.from_user.username, "python"))
+        logging.info("%s: %s", message.from_user.username, "python")
         self.bot.send_message(message.chat.id, "import antigravity")
 
     def handle_messages(self, messages):
@@ -442,11 +442,12 @@ def main():
 
     # Starting bot
     logging.info("Iniciando bot")
+    bot = telebot.TeleBot(_config['telegram_token'])
     if _config["dev"]:
         logging.info("Dev mode activated.")
-        logging.info("Usando telegram_token=%s" % (_config["telegram_token"]))
-        logging.info("Usando meetup_key=%s" % (_config["meetup_key"]))
-    bot = telebot.TeleBot(_config['telegram_token'])
+        logging.info("Usando @%s", bot.get_me().username)
+        logging.info("Usando telegram_token=%(telegram_token)s", _config)
+        logging.info("Usando meetup_key=%(meetup_key)s", _config)
     resources = Resources(_config)
     gdgbot = GDGAjuBot(bot, resources, _config)
     gdgbot.start()
