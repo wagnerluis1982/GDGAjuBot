@@ -1,1 +1,1 @@
-worker: gdgajubot --no-dev
+worker: pip install --upgrade . && gdgajubot --no-dev
