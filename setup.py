@@ -3,6 +3,9 @@
 import codecs
 from setuptools import setup
 
+with open('requirements.txt') as requirements_file:
+    requirements = requirements_file.read().splitlines()
+
 setup(
     name = "gdgajubot",
     version = "1.4",
@@ -13,13 +16,7 @@ setup(
     license = "GPLv2",
     packages = ["gdgajubot"],
     scripts = ['scripts/gdgajubot'],
-    install_requires=[
-        "Beaker==1.8.0",
-        "beautifulsoup4==4.4.1",
-        "pyTelegramBotAPI==2.1.3",
-        "requests==2.7.0",
-        "tailer==0.4.1",
-    ],
+    install_requires = requirements,
     classifiers = [
         "Programming Language :: Python :: 3.4",
         "Development Status :: 4 - Beta",
