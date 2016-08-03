@@ -1,1 +1,1 @@
-worker: pip install --upgrade . && gdgajubot --no-dev
+worker: ./scripts/heroku-worker.sh
