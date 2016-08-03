@@ -14,8 +14,12 @@ setup(
     description = "GDG Aracaju Bot",
     long_description = codecs.open("README.md", 'r', encoding='utf-8').read(),
     license = "GPLv2",
+    entry_points={
+        'console_scripts': [
+            'gdgajubot=gdgajubot.gdgajubot:main',
+        ],
+    },
     packages = ["gdgajubot"],
-    scripts = ['scripts/gdgajubot'],
     install_requires = requirements,
     classifiers = [
         "Programming Language :: Python :: 3.4",
