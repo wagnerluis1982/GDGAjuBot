@@ -19,6 +19,8 @@ from . import util
 
 
 class Resources:
+    BOOK_URL = "https://www.packtpub.com/packt/offers/free-learning"
+
     # Configuring cache
     cache = CacheManager(**parse_cache_config_options({'cache.type': 'memory'}))
 
@@ -46,7 +48,7 @@ class Resources:
 
     @cache.cache('get_packt_free_book', expire=600)
     def get_packt_free_book(self):
-        r = requests.get("https://www.packtpub.com/packt/offers/free-learning")
+        r = requests.get(self.BOOK_URL)
         return self.extract_packt_free_book(r.content, r.encoding)
 
     @staticmethod
@@ -311,7 +313,7 @@ class GDGAjuBot:
 
     def _book_response(self, book, now=None):
         if book is None:
-            return "https://www.packtpub.com/packt/offers/free-learning"
+            return Resources.BOOK_URL
 
         if now is None:
             now = datetime.datetime.now(tz=util.AJU_TZ)
@@ -323,9 +325,9 @@ class GDGAjuBot:
 
         response = (
             "Confira o livro gratuito de hoje da Packt Publishing 🎁\n\n"
-            "📖 [%s](https://www.packtpub.com/packt/offers/free-learning)\n"
+            "📖 [%s](%s)\n"
             "🔎 %s\n"
-        ) % (book.name, book.summary)
+        ) % (book.name, Resources.BOOK_URL, book.summary)
 
         for num, in_words in self.timeleft:
             if seconds <= num:
