@@ -60,6 +60,9 @@ class Resources:
         page = BeautifulSoup(content, 'html.parser')
         dealoftheday = page.select_one('#deal-of-the-day div div div:nth-of-type(2)')
 
+        if not dealoftheday:
+            return None
+
         book = util.AttributeDict()
         book['name'] = dealoftheday.select_one('div:nth-of-type(2) h2').text.strip()
         book['summary'] = dealoftheday.select_one('div:nth-of-type(3)').text.strip()
@@ -307,6 +310,9 @@ class GDGAjuBot:
                 (3600, '1 hora'))
 
     def _book_response(self, book, now=None):
+        if book is None:
+            return "https://www.packtpub.com/packt/offers/free-learning"
+
         if now is None:
             now = datetime.datetime.now(tz=util.AJU_TZ)
 
