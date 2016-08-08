@@ -20,6 +20,11 @@ from . import util
 
 class Resources:
     BOOK_URL = "https://www.packtpub.com/packt/offers/free-learning"
+    HEADERS = {
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) "
+                      "AppleWebKit/537.36 (KHTML, like Gecko) "
+                      "Chrome/51.0.2704.79 Safari/537.36"
+    }
 
     # Configuring cache
     cache = CacheManager(**parse_cache_config_options({'cache.type': 'memory'}))
@@ -48,7 +53,7 @@ class Resources:
 
     @cache.cache('get_packt_free_book', expire=600)
     def get_packt_free_book(self):
-        r = requests.get(self.BOOK_URL)
+        r = requests.get(self.BOOK_URL, headers=self.HEADERS)
         return self.extract_packt_free_book(r.content, r.encoding)
 
     @staticmethod
