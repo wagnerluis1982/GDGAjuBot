@@ -244,7 +244,8 @@ class GDGAjuBot:
         logging.info("%s: %s", message.from_user.username, "/events")
         try:
             next_events = self.resources.get_events(5)
-            response = self._format_events(next_events)
+            response = self._format_events(next_events) if next_events else \
+                "Não há nenhum futuro evento do grupo %s." % self.config["group_name"]
             self._smart_reply(message, response,
                               parse_mode="Markdown", disable_web_page_preview=True)
         except Exception as e:
