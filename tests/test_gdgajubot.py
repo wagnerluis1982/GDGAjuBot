@@ -93,6 +93,12 @@ class TestGDGAjuBot(unittest.TestCase):
         g_bot.send_welcome(message)
         self._assert_send_welcome(bot, message)
 
+    def test_help(self):
+        bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
+        g_bot = gdgajubot.GDGAjuBot(self.config, bot, resources)
+        g_bot.help(message)
+        self._assert_help_message(bot, message)
+
     def test_list_upcoming_events(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
         g_bot = gdgajubot.GDGAjuBot(self.config, bot, resources)
