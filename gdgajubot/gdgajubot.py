@@ -191,10 +191,10 @@ commands = handler.commands
 
 
 class GDGAjuBot:
-    def __init__(self, bot, resources, config):
+    def __init__(self, bot, config, resources=None):
         self.bot = bot
-        self.resources = resources
         self.config = config
+        self.resources = resources if resources else Resources(config)
         self.auto_topics = {}
         bot.set_update_listener(self.handle_messages)
 
@@ -214,7 +214,6 @@ class GDGAjuBot:
             "/auto_book - Atualiza automaticamente sobre ebooks gratuitos na Packt Publishing.\n" \
             "/auto_events - Atualiza automaticamente sobre eventos do {group_name}"
         self.bot.reply_to(message, help_message.format(group_name=self.config["group_name"]))
-
 
     @commands('/auto_events')
     def auto_events(self, message):
@@ -462,8 +461,7 @@ def main():
         logging.info("Usando @%s", bot.get_me().username)
         logging.info("Usando telegram_token=%(telegram_token)s", _config)
         logging.info("Usando meetup_key=%(meetup_key)s", _config)
-    resources = Resources(_config)
-    gdgbot = GDGAjuBot(bot, resources, _config)
+    gdgbot = GDGAjuBot(bot, _config)
     gdgbot.start()
 
 
