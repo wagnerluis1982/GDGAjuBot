@@ -89,13 +89,13 @@ class TestGDGAjuBot(unittest.TestCase):
 
     def test_send_welcome(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
-        g_bot = gdgajubot.GDGAjuBot(bot, resources, self.config)
+        g_bot = gdgajubot.GDGAjuBot(bot, self.config, resources)
         g_bot.send_welcome(message)
         self._assert_send_welcome(bot, message)
 
     def test_list_upcoming_events(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
-        g_bot = gdgajubot.GDGAjuBot(bot, resources, self.config)
+        g_bot = gdgajubot.GDGAjuBot(bot, self.config, resources)
         g_bot.list_upcoming_events(message)
 
         # Verifica se o response criado está correto
@@ -108,7 +108,7 @@ class TestGDGAjuBot(unittest.TestCase):
 
     def test_packtpub_free_learning(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
-        g_bot = gdgajubot.GDGAjuBot(bot, resources, self.config)
+        g_bot = gdgajubot.GDGAjuBot(bot, self.config, resources)
         ts = resources.book.expires
 
         # Sem warning
@@ -133,7 +133,7 @@ class TestGDGAjuBot(unittest.TestCase):
 
     def test_changelog(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage(id=0xB00B)
-        g_bot = gdgajubot.GDGAjuBot(bot, resources, self.config)
+        g_bot = gdgajubot.GDGAjuBot(bot, self.config, resources)
         g_bot.changelog(message)
         self._assert_changelog(bot, message)
 
@@ -145,9 +145,7 @@ class TestGDGAjuBot(unittest.TestCase):
         self._assert_mockbot(bot)
         help_message = "/help - Exibe essa mensagem.\n" \
             "/book - Informa o ebook gratuito do dia na Packt Publishing.\n" \
-            "/events - Informa a lista de próximos eventos do {group_name}.\n" \
-            "/auto_book - Atualiza automaticamente sobre ebooks gratuitos na Packt Publishing.\n" \
-            "/auto_events - Atualiza automaticamente sobre eventos do {group_name}"
+            "/events - Informa a lista de próximos eventos do {group_name}."
         help_message = help_message.format(group_name=self.config["group_name"])
         bot.reply_to.assert_called_with(message, help_message)
 
@@ -182,7 +180,7 @@ class TestGDGAjuBot(unittest.TestCase):
     def test_smart_reply(self):
         bot, resources = MockTeleBot(), MockResources()
         message = MockMessage(id=0x6D6)
-        g_bot = gdgajubot.GDGAjuBot(bot, resources, self.config)
+        g_bot = gdgajubot.GDGAjuBot(bot, self.config, resources)
         text = "I <3 GDG Aracaju"
 
         # Mensagens privadas não fazem link
@@ -207,7 +205,7 @@ class TestGDGAjuBot(unittest.TestCase):
 
     def test_handle_messages(self):
         bot, resources = MockTeleBot(), MockResources()
-        g_bot = gdgajubot.GDGAjuBot(bot, resources, self.config)
+        g_bot = gdgajubot.GDGAjuBot(bot, self.config, resources)
 
         # test simple commands text
         commands_asserts = {

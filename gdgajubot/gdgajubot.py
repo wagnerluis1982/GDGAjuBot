@@ -3,10 +3,8 @@
 import argparse
 import logging
 import re
-import os
 import datetime
 import time
-import threading
 
 import requests
 import requests.exceptions
@@ -94,92 +92,6 @@ class Resources:
         return long_url
 
 
-class AutoUpdate:
-    def __init__(self, command, description, bot, get_function):
-        self.command = command
-        self.description = description
-        self.bot = bot
-        self.get_function = get_function
-
-        self.interested_users = set()
-        self.iu_lock = threading.RLock()
-        self.polling = threading.Event()
-        self.last_response = util.Atomic()
-
-    def toggle_interest(self, user, chat):
-        with self.iu_lock:
-            user_id = user.id
-
-            # Verifica se o usuário não é um admin
-            if user.id != chat.id:
-                try:
-                    administrators = self.bot.get_chat_administrators(chat.id)
-                    for admin in administrators:
-                        if admin.user.id == user_id:
-                            user_id = chat.id
-                            break
-                    else:
-                        return 2
-                except telebot.apihelper.ApiException:
-                    pass
-
-            # Adiciona o usuário à lista de interessados
-            if user_id not in self.interested_users:
-                self.bot.send_message(
-                    user_id,
-                    "Você receberá as atualizações para %s\n\n"
-                    "Para cancelar, envie %s" % (self.description, self.command)
-                )
-                self.interested_users.add(user_id)
-
-                # Envia a primeira mensagem para esse usuário
-                r = self.last_response.get(on_none_f=self.get_function)
-                self.send_update(user_id, r)
-
-                # Se antes da adição não havia nenhum interessado, inicia o polling de atualizações
-                if len(self.interested_users) == 1:
-                    self.start_polling()
-
-                return 1
-
-            # Remove o usuário da lista de interessados
-            else:
-                self.interested_users.remove(user_id)
-                self.bot.send_message(
-                    user_id,
-                    "Você não receberá mais as atualizações para %s" % self.description
-                )
-
-                # Caso não haja mais interessados, para o polling
-                if len(self.interested_users) == 0:
-                    self.stop_polling()
-
-                return 0
-
-    def run(self):
-        while self.polling.is_set():
-            time.sleep(60)
-            r = self.get_function()
-            if self.last_response.set(r, on_diff=True):
-                with self.iu_lock:
-                    interested = self.interested_users.copy()
-                for uid in interested:
-                    self.send_update(uid, r)
-
-    def start_polling(self):
-        self.polling.set()
-        threading.Thread(target=self.run).start()
-
-    def stop_polling(self):
-        self.polling.clear()
-        self.last_response.set(None)
-
-    def send_update(self, user_id, response):
-        self.bot.send_message(user_id,
-                              "`%s`: nova atualização 😃\n\n" % self.command + response,
-                              parse_mode="Markdown", disable_web_page_preview=True)
-
-
 # Funções de busca usadas nas easter eggs
 find_ruby = re.compile(r"(?i)\bRUBY\b").search
 find_java = re.compile(r"(?i)\bJAVA\b").search
@@ -191,11 +103,10 @@ commands = handler.commands
 
 
 class GDGAjuBot:
-    def __init__(self, bot, resources, config):
+    def __init__(self, bot, config, resources=None):
         self.bot = bot
-        self.resources = resources
         self.config = config
-        self.auto_topics = {}
+        self.resources = resources if resources else Resources(config)
         bot.set_update_listener(self.handle_messages)
 
     @commands('/start')
@@ -210,33 +121,8 @@ class GDGAjuBot:
         logging.info("/help")
         help_message = "/help - Exibe essa mensagem.\n" \
             "/book - Informa o ebook gratuito do dia na Packt Publishing.\n" \
-            "/events - Informa a lista de próximos eventos do {group_name}.\n" \
-            "/auto_book - Atualiza automaticamente sobre ebooks gratuitos na Packt Publishing.\n" \
-            "/auto_events - Atualiza automaticamente sobre eventos do {group_name}"
+            "/events - Informa a lista de próximos eventos do {group_name}."
         self.bot.reply_to(message, help_message.format(group_name=self.config["group_name"]))
-
-
-    @commands('/auto_events')
-    def auto_events(self, message):
-        # Ignore non-private chats
-        if message.chat.type == "channel":
-            return
-
-        # Create events topic if needed
-        if "events" not in self.auto_topics:
-            def get_events():
-                next_events = self.resources.get_events(5)
-                return self._format_events(next_events)
-
-            self.auto_topics["events"] = AutoUpdate(
-                command="/auto_events",
-                description="os eventos no Meetup do " + self.config["group_name"],
-                bot=self.bot,
-                get_function=get_events)
-
-        # Toggle user interest
-        status = self.auto_topics["events"].toggle_interest(message.from_user, message.chat)
-        self._log_autocmd("/events", status, message)
 
     @commands('/events')
     def list_upcoming_events(self, message):
@@ -272,27 +158,6 @@ class GDGAjuBot:
 
             response.append("[%(name)s](%(link)s): %(time)s" % event)
         return '\n'.join(response)
-
-    @commands('/auto_book')
-    def auto_book(self, message):
-        # Ignore channels
-        if message.chat.type == "channel":
-            return
-
-        # Create book topic if needed
-        if "book" not in self.auto_topics:
-            def get_book():
-                book = self.resources.get_packt_free_book()
-                return self._book_response(book)
-            self.auto_topics["book"] = AutoUpdate(
-                command="/auto_book",
-                description="o livro do dia da Packt Publishing",
-                bot=self.bot,
-                get_function=get_book)
-
-        # Toggle user interest
-        status = self.auto_topics["book"].toggle_interest(message.from_user, message.chat)
-        self._log_autocmd("/book", status, message)
 
     @commands('/book')
     def packtpub_free_learning(self, message, now=None):
@@ -363,13 +228,6 @@ class GDGAjuBot:
         else:
             self.bot.reply_to(message, text, **kwargs)
 
-    def _log_autocmd(self, command, status, message, signs=('-', '+', '#')):
-        username = message.from_user.username
-        if self.config['dev']:
-            self.bot.reply_to(message, "%s: uso somente para administradores do grupo" % command)
-
-        logging.info("%s: /auto_events (%s)", username, signs[status])
-
     @commands('/changelog')
     def changelog(self, message):
         logging.info("%s: %s", message.from_user.username, "/changelog")
@@ -427,7 +285,7 @@ def main():
 
     # Configuring bot parameters
     logging.info("Configurando parâmetros")
-    parser = argparse.ArgumentParser(description='Bot do GDG Aracaju')
+    parser = util.ArgumentParser(description='Bot do GDG Aracaju')
     parser.add_argument('-t', '--telegram_token', help='Token da API do Telegram', required=True)
     parser.add_argument('-m', '--meetup_key', help='Key da API do Meetup', required=True)
     parser.add_argument('-g', '--group_name', help='Grupo do Meetup', required=True)
@@ -435,24 +293,8 @@ def main():
     parser.add_argument('-d', '--dev', help='Indicador de Debug/Dev mode', action='store_true')
     parser.add_argument('--no-dev', help=argparse.SUPPRESS, dest='dev', action='store_false')
 
-    # Get required arguments to check after parsed
-    required_actions = []
-    for action in parser._actions:
-        if action.required:
-            required_actions.append(action)
-            action.required = False
-
-    # Parse command line args
-    namespace = parser.parse_args()
-
-    # Mounting config
-    _config = {k: v or os.environ.get(k.upper(), '')
-               for k, v in vars(namespace).items()}
-
-    # Verifying required arguments
-    missing_args = [argparse._get_action_name(a) for a in required_actions if not _config[a.dest]]
-    if missing_args:
-        parser.error("missing arguments: " + ", ".join(missing_args))
+    # Parse command line args and get the config
+    _config = parser.parse_args()
 
     # Starting bot
     logging.info("Iniciando bot")
@@ -462,8 +304,7 @@ def main():
         logging.info("Usando @%s", bot.get_me().username)
         logging.info("Usando telegram_token=%(telegram_token)s", _config)
         logging.info("Usando meetup_key=%(meetup_key)s", _config)
-    resources = Resources(_config)
-    gdgbot = GDGAjuBot(bot, resources, _config)
+    gdgbot = GDGAjuBot(bot, _config)
     gdgbot.start()
 
 

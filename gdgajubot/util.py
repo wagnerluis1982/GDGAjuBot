@@ -1,5 +1,7 @@
+import argparse
 import datetime
 import logging
+import os
 import re
 import threading
 
@@ -105,3 +107,30 @@ class Atomic:
 class AttributeDict(dict):
     __getattr__ = dict.__getitem__
     __setattr__ = dict.__setitem__
+
+
+class ArgumentParser(argparse.ArgumentParser):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._required_actions = []
+
+    def add_argument(self, *args, **kwargs):
+        action = super().add_argument(*args, **kwargs)
+        if action.required:
+            action.required = False
+            self._required_actions += [action]
+
+    def parse_args(self, *args, **kwargs):
+        namespace = super().parse_args(*args, **kwargs)
+
+        # Mounting config
+        config = {k: v or os.environ.get(k.upper(), '')
+                  for k, v in vars(namespace).items()}
+
+        # Verifying required arguments
+        missing_args = [argparse._get_action_name(a)
+                        for a in self._required_actions if not config[a.dest]]
+        if missing_args:
+            self.error("missing arguments: " + ", ".join(missing_args))
+
+        return config
