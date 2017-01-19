@@ -103,11 +103,12 @@ commands = handler.commands
 
 
 class GDGAjuBot:
-    def __init__(self, bot, config, resources=None):
-        self.bot = bot
+    def __init__(self, config, bot=None, resources=None):
         self.config = config
+        self.bot = bot if bot else telebot.TeleBot(config['telegram_token'])
         self.resources = resources if resources else Resources(config)
-        bot.set_update_listener(self.handle_messages)
+
+        self.bot.set_update_listener(self.handle_messages)
 
     @commands('/start')
     def send_welcome(self, message):
@@ -298,13 +299,12 @@ def main():
 
     # Starting bot
     logging.info("Iniciando bot")
-    bot = telebot.TeleBot(_config['telegram_token'])
+    gdgbot = GDGAjuBot(_config)
     if _config["dev"]:
         logging.info("Dev mode activated.")
-        logging.info("Usando @%s", bot.get_me().username)
+        logging.info("Usando @%s", gdgbot.bot.get_me().username)
         logging.info("Usando telegram_token=%(telegram_token)s", _config)
         logging.info("Usando meetup_key=%(meetup_key)s", _config)
-    gdgbot = GDGAjuBot(bot, _config)
     gdgbot.start()
 
 
