@@ -3,7 +3,6 @@
 import argparse
 import logging
 import re
-import os
 import datetime
 import time
 
@@ -286,7 +285,7 @@ def main():
 
     # Configuring bot parameters
     logging.info("Configurando parâmetros")
-    parser = argparse.ArgumentParser(description='Bot do GDG Aracaju')
+    parser = util.ArgumentParser(description='Bot do GDG Aracaju')
     parser.add_argument('-t', '--telegram_token', help='Token da API do Telegram', required=True)
     parser.add_argument('-m', '--meetup_key', help='Key da API do Meetup', required=True)
     parser.add_argument('-g', '--group_name', help='Grupo do Meetup', required=True)
@@ -294,24 +293,8 @@ def main():
     parser.add_argument('-d', '--dev', help='Indicador de Debug/Dev mode', action='store_true')
     parser.add_argument('--no-dev', help=argparse.SUPPRESS, dest='dev', action='store_false')
 
-    # Get required arguments to check after parsed
-    required_actions = []
-    for action in parser._actions:
-        if action.required:
-            required_actions.append(action)
-            action.required = False
-
-    # Parse command line args
-    namespace = parser.parse_args()
-
-    # Mounting config
-    _config = {k: v or os.environ.get(k.upper(), '')
-               for k, v in vars(namespace).items()}
-
-    # Verifying required arguments
-    missing_args = [argparse._get_action_name(a) for a in required_actions if not _config[a.dest]]
-    if missing_args:
-        parser.error("missing arguments: " + ", ".join(missing_args))
+    # Parse command line args and get the config
+    _config = parser.parse_args()
 
     # Starting bot
     logging.info("Iniciando bot")
