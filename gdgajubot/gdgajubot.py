@@ -49,7 +49,16 @@ class Resources:
             'page': n,                 # limit to n events
         })
 
-        return r.json()
+        # API output
+        events = r.json()
+
+        for event in events:
+            # convert time returned by Meetup API
+            event['time'] = datetime.datetime.fromtimestamp(event['time'] / 1000, tz=util.AJU_TZ)
+            # shorten url!
+            event['link'] = self.get_short_url(event['link'])
+
+        return events
 
     @cache.cache('get_packt_free_book', expire=600)
     def get_packt_free_book(self):
@@ -177,8 +186,10 @@ class GDGAjuBot:
         logging.info("%s: %s", message.from_user.username, "/events")
         try:
             next_events = self.resources.get_events(5)
-            response = self._format_events(next_events) if next_events else \
-                "Não há nenhum futuro evento do grupo %s." % self.config["group_name"]
+            if next_events:
+                response = self._format_events(next_events)
+            else:
+                response = "Não há nenhum futuro evento do grupo %s." % self.config["group_name"]
             self._smart_reply(message, response,
                               parse_mode="Markdown", disable_web_page_preview=True)
         except Exception as e:
@@ -187,21 +198,14 @@ class GDGAjuBot:
     def _format_events(self, events):
         response = []
         for event in events:
-            # If the events wasn't in cache, event['time'] is a timestamp.
+            # If the events wasn't in cache, event['time'] is a datetime object
             # So we format it!
-            if isinstance(event['time'], int):
-                # convert time returned by Meetup API
-                event_dt = datetime.datetime.fromtimestamp(event['time'] / 1000, tz=util.AJU_TZ)
-
+            if isinstance(event['time'], datetime.datetime):
                 # create a pretty-looking date
                 formatting = '%d/%m %Hh'
-                if event_dt.minute:
+                if event['time'].minute:
                     formatting += '%M'
-                event['time'] = event_dt.strftime(formatting)
-
-                # When event['time'] is a timestamp, we also know that event['link'] is a long url.
-                # So we shorten it!
-                event['link'] = self.resources.get_short_url(event['link'])
+                event['time'] = event['time'].strftime(formatting)
 
             response.append("[%(name)s](%(link)s): %(time)s" % event)
         return '\n'.join(response)
