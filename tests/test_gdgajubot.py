@@ -145,9 +145,7 @@ class TestGDGAjuBot(unittest.TestCase):
         self._assert_mockbot(bot)
         help_message = "/help - Exibe essa mensagem.\n" \
             "/book - Informa o ebook gratuito do dia na Packt Publishing.\n" \
-            "/events - Informa a lista de próximos eventos do {group_name}.\n" \
-            "/auto_book - Atualiza automaticamente sobre ebooks gratuitos na Packt Publishing.\n" \
-            "/auto_events - Atualiza automaticamente sobre eventos do {group_name}"
+            "/events - Informa a lista de próximos eventos do {group_name}."
         help_message = help_message.format(group_name=self.config["group_name"])
         bot.reply_to.assert_called_with(message, help_message)
 
