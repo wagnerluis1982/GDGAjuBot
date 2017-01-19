@@ -120,11 +120,18 @@ def adapt_callback(cb, *args):
 
 class GDGAjuBot:
     def __init__(self, config, bot=None, resources=None):
-        # Conecta ao telegram com o token passado na configuração
         self.config = config
+        self.resources = resources if resources else Resources(config)
+
+        # O parâmetro bot só possui valor nos casos de teste, nesse caso,
+        # encerra o __init__ aqui para não haver conexão ao Telegram.
+        if bot:
+            self.bot = bot
+            return
+
+        # Conecta ao telegram com o token passado na configuração
         self.updater = Updater(token=config['telegram_token'])
         self.bot = self.updater.bot
-        self.resources = resources if resources else Resources(config)
 
         # Anexa uma função da API antiga para manter retrocompatibilidade
         def reply_to(message, text, **kwargs):
