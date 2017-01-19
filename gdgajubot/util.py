@@ -1,5 +1,6 @@
 import argparse
 import datetime
+import functools
 import logging
 import os
 import re
@@ -8,25 +9,26 @@ import threading
 
 class HandlerHelper:
     def __init__(self):
-        self.map_commands = {}
+        self.functions = {}
 
-    def commands(self, *names):
+    def __call__(self, *names):
         """Decorator para marcar funções como comandos do bot"""
         def decorator(func):
+            @functools.wraps(func)
             def wrapped(*args, **kwargs):
                 return func(*args, **kwargs)
             for name in names:
-                self.map_commands[name] = func
+                self.functions[name] = func
             return wrapped
         return decorator
 
-    def handle_command(self, name, *args, raises=False, **kwargs):
+    def handle(self, name, *args, raises=False, **kwargs):
         """Executa a função associada ao comando passado
 
         :except: Exceções são relançadas se `raises` é `True`, do contrário, são enviadas ao log.
         :return: `True` ou `False` indicando que o comando foi executado
         """
-        function = self.map_commands.get(name)
+        function = self.functions.get(name)
         if function:
             try:
                 function(*args, **kwargs)

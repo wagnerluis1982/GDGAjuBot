@@ -98,8 +98,7 @@ find_java = re.compile(r"(?i)\bJAVA\b").search
 find_python = re.compile(r"(?i)\bPYTHON\b").search
 
 # Helper para definir os comandos do bot
-handler = util.HandlerHelper()
-commands = handler.commands
+commands = util.HandlerHelper()
 
 
 class GDGAjuBot:
@@ -256,7 +255,7 @@ class GDGAjuBot:
                 # Identifica o comando e despacha para a função correta
                 command = util.extract_command(message.text)
                 if command:
-                    handler.handle_command(command, *(self, message))
+                    commands.handle(command, *(self, message))
 
                 # Easter eggs
                 elif find_ruby(message.text):
