@@ -4,14 +4,16 @@ import argparse
 import logging
 import re
 import datetime
-import time
+import functools
 
 import requests
-import requests.exceptions
-import telebot
 from beaker.cache import CacheManager
 from beaker.util import parse_cache_config_options
 from bs4 import BeautifulSoup
+from telegram.ext import CommandHandler
+from telegram.ext import Updater
+from telegram.ext.filters import BaseFilter, Filters
+from telegram.ext.messagehandler import MessageHandler
 
 from . import util
 
@@ -92,23 +94,67 @@ class Resources:
         return long_url
 
 
+class FilterSearch(BaseFilter):
+    def __init__(self, f):
+        self.f = f
+
+    def filter(self, message):
+        return Filters.text(message) and self.f(message.text)
+
+
 # Funções de busca usadas nas easter eggs
 find_ruby = re.compile(r"(?i)\bRUBY\b").search
 find_java = re.compile(r"(?i)\bJAVA\b").search
 find_python = re.compile(r"(?i)\bPYTHON\b").search
 
 # Helper para definir os comandos do bot
-handler = util.HandlerHelper()
-commands = handler.commands
+commands = util.HandlerHelper()
+
+
+# Adapta a assinatura de função esperada por `add_handler` na API nova
+def adapt_callback(cb, *args):
+    if args:
+        cb = functools.partial(cb, *args)
+    return lambda _, u: cb(u.message)
 
 
 class GDGAjuBot:
     def __init__(self, config, bot=None, resources=None):
         self.config = config
-        self.bot = bot if bot else telebot.TeleBot(config['telegram_token'])
         self.resources = resources if resources else Resources(config)
 
-        self.bot.set_update_listener(self.handle_messages)
+        # O parâmetro bot só possui valor nos casos de teste, nesse caso,
+        # encerra o __init__ aqui para não haver conexão ao Telegram.
+        if bot:
+            self.bot = bot
+            return
+
+        # Conecta ao telegram com o token passado na configuração
+        self.updater = Updater(token=config['telegram_token'])
+        self.bot = self.updater.bot
+
+        # Anexa uma função da API antiga para manter retrocompatibilidade
+        def reply_to(message, text, **kwargs):
+            self.bot.send_message(chat_id=message.chat_id, text=text,
+                                  reply_to_message_id=message.message_id, **kwargs)
+        self.bot.reply_to = reply_to
+
+        # Configura os comandos aceitos pelo bot
+        dispatcher = self.updater.dispatcher
+        for k, function in commands.functions.items():
+            name = k[1:] if k[0] == '/' else k
+            dispatcher.add_handler(
+                CommandHandler(name, adapt_callback(function, self)))
+
+        # Configura as easter eggs
+        easter_eggs = (
+            (find_ruby, self.love_ruby),
+            (find_java, self.memory_java),
+            (find_python, self.easter_python),
+        )
+        for search, action in easter_eggs:
+            dispatcher.add_handler(
+                MessageHandler(FilterSearch(search), adapt_callback(action)))
 
     @commands('/start')
     def send_welcome(self, message):
@@ -250,31 +296,15 @@ class GDGAjuBot:
         logging.info("%s: %s", message.from_user.username, "python")
         self.bot.send_message(message.chat.id, "import antigravity")
 
-    def handle_messages(self, messages):
-        for message in messages:
-            if message.content_type == "text":
-                # Identifica o comando e despacha para a função correta
-                command = util.extract_command(message.text)
-                if command:
-                    handler.handle_command(command, *(self, message))
-
-                # Easter eggs
-                elif find_ruby(message.text):
-                    self.love_ruby(message)
-                elif find_java(message.text):
-                    self.memory_java(message)
-                elif find_python(message.text):
-                    self.easter_python(message)
-
     def start(self):
-        while True:
-            try:
-                self.bot.polling(none_stop=True, interval=0, timeout=20)
-                break
-            except requests.exceptions.RequestException as e:
-                logging.exception(e)
-                logging.info("Reiniciando bot em 10 segundos")
-                time.sleep(10)
+        self.updater.start_polling(clean=True)
+        logging.info("GDGAjuBot iniciado")
+        logging.info("Este é o bot do %(group_name)s", self.config)
+        if self.config["dev"]:
+            logging.info("Modo do desenvolvedor ativado")
+            logging.info("Usando o bot @%s", self.bot.get_me().username)
+            logging.info("Usando telegram_token=%(telegram_token)s", self.config)
+            logging.info("Usando meetup_key=%(meetup_key)s", self.config)
 
 
 def main():
@@ -298,13 +328,7 @@ def main():
     _config = parser.parse_args()
 
     # Starting bot
-    logging.info("Iniciando bot")
     gdgbot = GDGAjuBot(_config)
-    if _config["dev"]:
-        logging.info("Dev mode activated.")
-        logging.info("Usando @%s", gdgbot.bot.get_me().username)
-        logging.info("Usando telegram_token=%(telegram_token)s", _config)
-        logging.info("Usando meetup_key=%(meetup_key)s", _config)
     gdgbot.start()
 
 

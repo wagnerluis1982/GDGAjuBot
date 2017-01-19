@@ -93,6 +93,12 @@ class TestGDGAjuBot(unittest.TestCase):
         g_bot.send_welcome(message)
         self._assert_send_welcome(bot, message)
 
+    def test_help(self):
+        bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
+        g_bot = gdgajubot.GDGAjuBot(self.config, bot, resources)
+        g_bot.help(message)
+        self._assert_help_message(bot, message)
+
     def test_list_upcoming_events(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
         g_bot = gdgajubot.GDGAjuBot(self.config, bot, resources)
@@ -200,40 +206,6 @@ class TestGDGAjuBot(unittest.TestCase):
         g_bot._smart_reply(message, text)
         bot.send_message.assert_called_with(message.chat.id, "Clique para ver a última resposta",
                                             reply_to_message_id=82)
-
-    # Routing test
-
-    def test_handle_messages(self):
-        bot, resources = MockTeleBot(), MockResources()
-        g_bot = gdgajubot.GDGAjuBot(self.config, bot, resources)
-
-        # test simple commands text
-        commands_asserts = {
-            '/events': self._assert_list_upcoming_events,
-            '/start': self._assert_send_welcome,
-            '/changelog': self._assert_changelog,
-            '/book': self._assert_packtpub_free_learning,
-            '/help': self._assert_help_message,
-        }
-        messages = [MockMessage(id=i, text=cmd, content_type="text")
-                    for i, cmd in enumerate(commands_asserts)]
-        for i, _assert in enumerate(commands_asserts.values()):
-            g_bot.handle_messages(messages[i:i+1])
-            _assert(bot, messages[i])
-
-        # test qualifying commands text
-        commands_asserts = {
-            '/events@gdgajubot': self._assert_list_upcoming_events,
-            '/start@erickbot': self._assert_send_welcome,
-            '/changelog@wagnerbot': self._assert_changelog,
-            '/book@brandinibot': self._assert_packtpub_free_learning,
-            '/help@thalesbot': self._assert_help_message,
-        }
-        messages = [MockMessage(id=i, text=cmd, content_type="text")
-                    for i, cmd in enumerate(commands_asserts)]
-        for i, _assert in enumerate(commands_asserts.values()):
-            g_bot.handle_messages(messages[i:i+1])
-            _assert(bot, messages[i])
 
 
 class TestResources(unittest.TestCase):
