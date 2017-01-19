@@ -32,11 +32,17 @@ class Resources:
     def __init__(self, config):
         self.config = config
 
+        # create delegate method based on choice
+        if config['events_source'] == 'meetup':
+            self.generate_events = self.meetup_events
+        else:
+            self.generate_events = self.facebook_events
+
     @cache.cache('get_events', expire=60)
     def get_events(self, list_size=5):
         return list(self.generate_events(list_size))
 
-    def generate_events(self, n):
+    def meetup_events(self, n):
         """Obtém eventos do Meetup."""
         # api v3 base url
         url = "https://api.meetup.com/%(group_name)s/events" % self.config
@@ -57,6 +63,32 @@ class Resources:
             event['time'] = datetime.datetime.fromtimestamp(event['time'] / 1000, tz=util.AJU_TZ)
             # shorten url!
             event['link'] = self.get_short_url(event['link'])
+
+        return events
+
+    def facebook_events(self, n):
+        """Obtém eventos do Facebook."""
+        # api v2.8 base url
+        url = "https://graph.facebook.com/v2.8/%(group_name)s/events" % self.config
+
+        # response for the events
+        r = requests.get(url, params={
+            'access_token': self.config['facebook_key'],
+            'since': 'today',
+            'fields': 'name,start_time',  # filter response to these fields
+            'limit': n,                   # limit to n events
+        })
+
+        # API output
+        events = r.json()['data']
+
+        for event in events:
+            # convert time returned by Facebook API
+            event['time'] = datetime.datetime.strptime(event.pop('start_time'), "%Y-%m-%dT%H:%M:%S%z")
+            # create event link
+            link = "https://www.facebook.com/events/%s" % event.pop('id')
+            # shorten url!
+            event['link'] = self.get_short_url(link)
 
         return events
 
@@ -322,14 +354,25 @@ def main():
     logging.info("Configurando parâmetros")
     parser = util.ArgumentParser(description='Bot do GDG Aracaju')
     parser.add_argument('-t', '--telegram_token', help='Token da API do Telegram', required=True)
-    parser.add_argument('-m', '--meetup_key', help='Key da API do Meetup', required=True)
-    parser.add_argument('-g', '--group_name', help='Grupo do Meetup', required=True)
+    parser.add_argument('-m', '--meetup_key', help='Key da API do Meetup')
+    parser.add_argument('-f', '--facebook_key', help='Key da API do Facebook')
+    parser.add_argument('-g', '--group_name', help='Grupo do Meetup/Facebook', required=True)
     parser.add_argument('--url_shortener_key', help='Key da API do URL Shortener')
+    parser.add_argument('--events_source', choices=['meetup', 'facebook'])
     parser.add_argument('-d', '--dev', help='Indicador de Debug/Dev mode', action='store_true')
     parser.add_argument('--no-dev', help=argparse.SUPPRESS, dest='dev', action='store_false')
 
     # Parse command line args and get the config
     _config = parser.parse_args()
+
+    # Define the events source if needed
+    if not _config['events_source']:
+        if _config['meetup_key']:
+            _config['events_source'] = 'meetup'
+        elif _config['facebook_key']:
+            _config['events_source'] = 'facebook'
+        else:
+            parser.error('an API key is needed to get events')
 
     # Starting bot
     gdgbot = GDGAjuBot(_config)
