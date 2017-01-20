@@ -80,7 +80,7 @@ class Resources:
         })
 
         # API output
-        events = r.json()['data']
+        events = r.json().get('data', [])
 
         for event in events:
             # convert time returned by Facebook API
