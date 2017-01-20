@@ -32,11 +32,17 @@ class Resources:
     def __init__(self, config):
         self.config = config
 
+        # create delegate method based on choice
+        if config['events_source'] == 'meetup':
+            self.generate_events = self.meetup_events
+        else:
+            self.generate_events = self.facebook_events
+
     @cache.cache('get_events', expire=60)
     def get_events(self, list_size=5):
         return list(self.generate_events(list_size))
 
-    def generate_events(self, n):
+    def meetup_events(self, n):
         """Obtém eventos do Meetup."""
         # api v3 base url
         url = "https://api.meetup.com/%(group_name)s/events" % self.config
@@ -49,7 +55,42 @@ class Resources:
             'page': n,                 # limit to n events
         })
 
-        return r.json()
+        # API output
+        events = r.json()
+
+        for event in events:
+            # convert time returned by Meetup API
+            event['time'] = datetime.datetime.fromtimestamp(event['time'] / 1000, tz=util.AJU_TZ)
+            # shorten url!
+            event['link'] = self.get_short_url(event['link'])
+
+        return events
+
+    def facebook_events(self, n):
+        """Obtém eventos do Facebook."""
+        # api v2.8 base url
+        url = "https://graph.facebook.com/v2.8/%(group_name)s/events" % self.config
+
+        # response for the events
+        r = requests.get(url, params={
+            'access_token': self.config['facebook_key'],
+            'since': 'today',
+            'fields': 'name,start_time',  # filter response to these fields
+            'limit': n,                   # limit to n events
+        })
+
+        # API output
+        events = r.json()['data']
+
+        for event in events:
+            # convert time returned by Facebook API
+            event['time'] = datetime.datetime.strptime(event.pop('start_time'), "%Y-%m-%dT%H:%M:%S%z")
+            # create event link
+            link = "https://www.facebook.com/events/%s" % event.pop('id')
+            # shorten url!
+            event['link'] = self.get_short_url(link)
+
+        return events
 
     @cache.cache('get_packt_free_book', expire=600)
     def get_packt_free_book(self):
@@ -177,8 +218,10 @@ class GDGAjuBot:
         logging.info("%s: %s", message.from_user.username, "/events")
         try:
             next_events = self.resources.get_events(5)
-            response = self._format_events(next_events) if next_events else \
-                "Não há nenhum futuro evento do grupo %s." % self.config["group_name"]
+            if next_events:
+                response = self._format_events(next_events)
+            else:
+                response = "Não há nenhum futuro evento do grupo %s." % self.config["group_name"]
             self._smart_reply(message, response,
                               parse_mode="Markdown", disable_web_page_preview=True)
         except Exception as e:
@@ -187,21 +230,14 @@ class GDGAjuBot:
     def _format_events(self, events):
         response = []
         for event in events:
-            # If the events wasn't in cache, event['time'] is a timestamp.
+            # If the events wasn't in cache, event['time'] is a datetime object
             # So we format it!
-            if isinstance(event['time'], int):
-                # convert time returned by Meetup API
-                event_dt = datetime.datetime.fromtimestamp(event['time'] / 1000, tz=util.AJU_TZ)
-
+            if isinstance(event['time'], datetime.datetime):
                 # create a pretty-looking date
                 formatting = '%d/%m %Hh'
-                if event_dt.minute:
+                if event['time'].minute:
                     formatting += '%M'
-                event['time'] = event_dt.strftime(formatting)
-
-                # When event['time'] is a timestamp, we also know that event['link'] is a long url.
-                # So we shorten it!
-                event['link'] = self.resources.get_short_url(event['link'])
+                event['time'] = event['time'].strftime(formatting)
 
             response.append("[%(name)s](%(link)s): %(time)s" % event)
         return '\n'.join(response)
@@ -318,14 +354,25 @@ def main():
     logging.info("Configurando parâmetros")
     parser = util.ArgumentParser(description='Bot do GDG Aracaju')
     parser.add_argument('-t', '--telegram_token', help='Token da API do Telegram', required=True)
-    parser.add_argument('-m', '--meetup_key', help='Key da API do Meetup', required=True)
-    parser.add_argument('-g', '--group_name', help='Grupo do Meetup', required=True)
+    parser.add_argument('-m', '--meetup_key', help='Key da API do Meetup')
+    parser.add_argument('-f', '--facebook_key', help='Key da API do Facebook')
+    parser.add_argument('-g', '--group_name', help='Grupo do Meetup/Facebook', required=True)
     parser.add_argument('--url_shortener_key', help='Key da API do URL Shortener')
+    parser.add_argument('--events_source', choices=['meetup', 'facebook'])
     parser.add_argument('-d', '--dev', help='Indicador de Debug/Dev mode', action='store_true')
     parser.add_argument('--no-dev', help=argparse.SUPPRESS, dest='dev', action='store_false')
 
     # Parse command line args and get the config
     _config = parser.parse_args()
+
+    # Define the events source if needed
+    if not _config['events_source']:
+        if _config['meetup_key']:
+            _config['events_source'] = 'meetup'
+        elif _config['facebook_key']:
+            _config['events_source'] = 'facebook'
+        else:
+            parser.error('an API key is needed to get events')
 
     # Starting bot
     gdgbot = GDGAjuBot(_config)
