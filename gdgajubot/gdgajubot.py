@@ -175,10 +175,9 @@ class GDGAjuBot:
         self.bot = self.updater.bot
 
         # Anexa uma função da API antiga para manter retrocompatibilidade
-        def reply_to(message, text, **kwargs):
+        self.bot.reply_to = lambda message, text, **kwargs: \
             self.bot.send_message(chat_id=message.chat_id, text=text,
                                   reply_to_message_id=message.message_id, **kwargs)
-        self.bot.reply_to = reply_to
 
         # Configura os comandos aceitos pelo bot
         dispatcher = self.updater.dispatcher
