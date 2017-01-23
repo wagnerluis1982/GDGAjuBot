@@ -228,6 +228,23 @@ class GDGAjuBot:
             "/events - Informa a lista de próximos eventos do {group_name}."
         self.bot.reply_to(message, help_message.format(group_name=self.config["group_name"]))
 
+    @commands('/links')
+    def links(self, message):
+        """Envia uma lista de links do grupo associado."""
+        logging.info("/links")
+        social_links = self.resources.get_social_links()
+        if social_links:
+            response = '*Esses são os links para o nosso grupo:*\n\n'
+            for link_type, link_url in social_links.items():
+                response += " - [{type} = {url}]({url}) \n\n".format(
+                    type=link_type.capitalize(),
+                    url=link_url
+                )
+        else:
+            response = 'Não existem links associados a esse grupo.'
+        self._smart_reply(message, response,
+                          parse_mode="Markdown", disable_web_page_preview=True)
+
     @commands('/events')
     def list_upcoming_events(self, message):
         """Retorna a lista de eventos do Meetup."""
