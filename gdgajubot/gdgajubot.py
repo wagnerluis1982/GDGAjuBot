@@ -90,7 +90,7 @@ class Resources:
             # shorten url!
             event['link'] = self.get_short_url(link)
 
-        return events
+        return sorted(events, key=lambda x: x['time'])
 
     @cache.cache('get_packt_free_book', expire=600)
     def get_packt_free_book(self):
