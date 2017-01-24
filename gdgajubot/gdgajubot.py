@@ -5,8 +5,10 @@ import logging
 import re
 import datetime
 import functools
+from collections import OrderedDict
 
 import requests
+import requests.exceptions
 from beaker.cache import CacheManager
 from beaker.util import parse_cache_config_options
 from bs4 import BeautifulSoup
@@ -117,6 +119,21 @@ class Resources:
         book['expires'] = int(dealoftheday.select_one('span.packt-js-countdown').attrs['data-countdown-to'])
 
         return book
+
+    @cache.cache('get_social_links', expire=3600)
+    def get_social_links(self):
+        remote_url = self.config['remote_resources_url']
+        if remote_url:
+            url = remote_url + '/social_links.json'
+            try:
+                r = requests.get(url)
+                if r.ok:
+                    return OrderedDict(r.json())
+            except requests.exceptions.RequestException:
+                pass
+            except Exception as e:
+                logging.exception(e)
+        return None
 
     @cache.cache('get_short_url')
     def get_short_url(self, long_url):
@@ -360,6 +377,7 @@ def main():
     parser.add_argument('--events_source', choices=['meetup', 'facebook'])
     parser.add_argument('-d', '--dev', help='Indicador de Debug/Dev mode', action='store_true')
     parser.add_argument('--no-dev', help=argparse.SUPPRESS, dest='dev', action='store_false')
+    parser.add_argument('--remote_resources_url', help=argparse.SUPPRESS)
 
     # Parse command line args and get the config
     _config = parser.parse_args()
