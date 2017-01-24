@@ -236,7 +236,7 @@ class GDGAjuBot:
         if social_links:
             response = '*Esses são os links para o nosso grupo:*\n\n'
             for link_type, link_url in social_links.items():
-                response += " - [{type} = {url}]({url}) \n\n".format(
+                response += "🔗 {type}: {url}\n".format(
                     type=link_type.capitalize(),
                     url=link_url
                 )
