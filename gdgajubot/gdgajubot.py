@@ -5,8 +5,10 @@ import logging
 import re
 import datetime
 import functools
+from collections import OrderedDict
 
 import requests
+import requests.exceptions
 from beaker.cache import CacheManager
 from beaker.util import parse_cache_config_options
 from bs4 import BeautifulSoup
@@ -118,6 +120,21 @@ class Resources:
 
         return book
 
+    @cache.cache('get_social_links', expire=3600)
+    def get_social_links(self):
+        remote_url = self.config['remote_resources_url']
+        if remote_url:
+            url = remote_url + '/social_links.json'
+            try:
+                r = requests.get(url)
+                if r.ok:
+                    return OrderedDict(r.json())
+            except requests.exceptions.RequestException:
+                pass
+            except Exception as e:
+                logging.exception(e)
+        return None
+
     @cache.cache('get_short_url')
     def get_short_url(self, long_url):
         # Faz a requisição da URL curta somente se houver uma key configurada
@@ -210,6 +227,23 @@ class GDGAjuBot:
             "/book - Informa o ebook gratuito do dia na Packt Publishing.\n" \
             "/events - Informa a lista de próximos eventos do {group_name}."
         self.bot.reply_to(message, help_message.format(group_name=self.config["group_name"]))
+
+    @commands('/links')
+    def links(self, message):
+        """Envia uma lista de links do grupo associado."""
+        logging.info("/links")
+        social_links = self.resources.get_social_links()
+        if social_links:
+            response = '*Esses são os links para o nosso grupo:*\n\n'
+            for link_type, link_url in social_links.items():
+                response += "🔗 {type}: {url}\n".format(
+                    type=link_type.capitalize(),
+                    url=link_url
+                )
+        else:
+            response = 'Não existem links associados a esse grupo.'
+        self._smart_reply(message, response,
+                          parse_mode="Markdown", disable_web_page_preview=True)
 
     @commands('/events')
     def list_upcoming_events(self, message):
@@ -360,6 +394,7 @@ def main():
     parser.add_argument('--events_source', choices=['meetup', 'facebook'])
     parser.add_argument('-d', '--dev', help='Indicador de Debug/Dev mode', action='store_true')
     parser.add_argument('--no-dev', help=argparse.SUPPRESS, dest='dev', action='store_false')
+    parser.add_argument('--remote_resources_url', help=argparse.SUPPRESS)
 
     # Parse command line args and get the config
     _config = parser.parse_args()
