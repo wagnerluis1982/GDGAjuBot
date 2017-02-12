@@ -47,52 +47,60 @@ class Resources:
     def meetup_events(self, n):
         """Obtém eventos do Meetup."""
         # api v3 base url
-        url = "https://api.meetup.com/%(group_name)s/events" % self.config
+        all_events = []
+        for group in self.config['group_name']:
+            url = "https://api.meetup.com/{group}/events".format(
+                group=group
+            )
 
-        # response for the events
-        r = requests.get(url, params={
-            'key': self.config['meetup_key'],
-            'status': 'upcoming',
-            'only': 'name,time,link',  # filter response to these fields
-            'page': n,                 # limit to n events
-        })
+            # response for the events
+            r = requests.get(url, params={
+                'key': self.config['meetup_key'],
+                'status': 'upcoming',
+                'only': 'name,time,link',  # filter response to these fields
+                'page': n,                 # limit to n events
+            })
 
-        # API output
-        events = r.json()
+            # API output
+            events = r.json()
 
-        for event in events:
-            # convert time returned by Meetup API
-            event['time'] = datetime.datetime.fromtimestamp(event['time'] / 1000, tz=util.AJU_TZ)
-            # shorten url!
-            event['link'] = self.get_short_url(event['link'])
+            for event in events:
+                # convert time returned by Meetup API
+                event['time'] = datetime.datetime.fromtimestamp(event['time'] / 1000, tz=util.AJU_TZ)
+                # shorten url!
+                event['link'] = self.get_short_url(event['link'])
 
-        return events
+            all_events.extend(events)
+        return sorted(all_events, key=lambda x: x['time'])
 
     def facebook_events(self, n):
         """Obtém eventos do Facebook."""
-        # api v2.8 base url
-        url = "https://graph.facebook.com/v2.8/%(group_name)s/events" % self.config
+        all_events = []
+        for group in self.config['group_name']:
+            # api v2.8 base url
+            url = "https://graph.facebook.com/v2.8/%s/events" % group
 
-        # response for the events
-        r = requests.get(url, params={
-            'access_token': self.config['facebook_key'],
-            'since': 'today',
-            'fields': 'name,start_time',  # filter response to these fields
-            'limit': n,                   # limit to n events
-        })
+            # response for the events
+            r = requests.get(url, params={
+                'access_token': self.config['facebook_key'],
+                'since': 'today',
+                'fields': 'name,start_time',  # filter response to these fields
+                'limit': n,                   # limit to n events
+            })
 
-        # API output
-        events = r.json().get('data', [])
+            # API output
+            events = r.json().get('data', [])
 
-        for event in events:
-            # convert time returned by Facebook API
-            event['time'] = datetime.datetime.strptime(event.pop('start_time'), "%Y-%m-%dT%H:%M:%S%z")
-            # create event link
-            link = "https://www.facebook.com/events/%s" % event.pop('id')
-            # shorten url!
-            event['link'] = self.get_short_url(link)
+            for event in events:
+                # convert time returned by Facebook API
+                event['time'] = datetime.datetime.strptime(event.pop('start_time'), "%Y-%m-%dT%H:%M:%S%z")
+                # create event link
+                link = "https://www.facebook.com/events/%s" % event.pop('id')
+                # shorten url!
+                event['link'] = self.get_short_url(link)
+            all_events.extend(events)
 
-        return sorted(events, key=lambda x: x['time'])
+        return sorted(all_events, key=lambda x: x['time'])
 
     @cache.cache('get_packt_free_book', expire=600)
     def get_packt_free_book(self):
@@ -217,16 +225,26 @@ class GDGAjuBot:
     def send_welcome(self, message):
         """Mensagem de apresentação do bot."""
         logging.info("/start")
-        self.bot.reply_to(message, "Olá! Eu sou o bot do %s! Se precisar de ajuda: /help" % (self.config["group_name"]))
+        start_message = "Olá! Eu sou o bot para %s! Se precisar de ajuda: /help" % (
+            ', '.join(self.config["group_name"]))
+        self.bot.reply_to(message, start_message)
 
     @commands('/help')
     def help(self, message):
         """Mensagem de ajuda do bot."""
         logging.info("/help")
         help_message = "/help - Exibe essa mensagem.\n" \
-            "/book - Informa o ebook gratuito do dia na Packt Publishing.\n" \
-            "/events - Informa a lista de próximos eventos do {group_name}."
-        self.bot.reply_to(message, help_message.format(group_name=self.config["group_name"]))
+            "/about - Sobre o bot e como contribuir.\n" \
+            "/book - Informa o ebook gratuito do dia na Packt Publishing.\n"
+        if len(self.config["group_name"]) > 1:
+            help_message += "/events - Informa a lista de próximos eventos dos grupos: {group_name}."
+        else:
+            help_message += "/events - Informa a lista de próximos eventos do {group_name}."
+
+        self.bot.reply_to(
+            message,
+            help_message.format(group_name=', '.join(self.config["group_name"]))
+        )
 
     @commands('/links')
     def links(self, message):
@@ -391,7 +409,7 @@ def main():
     parser.add_argument('-t', '--telegram_token', help='Token da API do Telegram', required=True)
     parser.add_argument('-m', '--meetup_key', help='Key da API do Meetup')
     parser.add_argument('-f', '--facebook_key', help='Key da API do Facebook')
-    parser.add_argument('-g', '--group_name', help='Grupo do Meetup/Facebook', required=True)
+    parser.add_argument('-g', '--group_name', help='Grupo(s) do Meetup/Facebook, separados por vírgulas', required=True)
     parser.add_argument('--url_shortener_key', help='Key da API do URL Shortener')
     parser.add_argument('--events_source', choices=['meetup', 'facebook'])
     parser.add_argument('-d', '--dev', help='Indicador de Debug/Dev mode', action='store_true')
@@ -409,6 +427,11 @@ def main():
             _config['events_source'] = 'facebook'
         else:
             parser.error('an API key is needed to get events')
+
+    if ',' in _config['group_name']:
+        _config['group_name'] = _config['group_name'].split(',')
+    else:
+        _config['group_name'] = (_config['group_name'],)
 
     # Starting bot
     gdgbot = GDGAjuBot(_config)
