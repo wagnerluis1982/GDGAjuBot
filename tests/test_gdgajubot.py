@@ -137,11 +137,11 @@ class TestGDGAjuBot(unittest.TestCase):
         g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 29, tz=AJU_TZ))
         self._assert_packtpub_free_learning(bot, message, warning="30 segundos")
 
-    def test_changelog(self):
+    def test_about(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage(id=0xB00B)
         g_bot = gdgajubot.GDGAjuBot(self.config, bot, resources)
-        g_bot.changelog(message)
-        self._assert_changelog(bot, message)
+        g_bot.about(message)
+        self._assert_about(bot, message)
 
     def _assert_send_welcome(self, bot, message):
         self._assert_mockbot(bot)
@@ -173,10 +173,11 @@ class TestGDGAjuBot(unittest.TestCase):
              "🔎 Good practices with Miguel O’Hara\n") + warning
         bot.reply_to.assert_called_with(message, r, parse_mode="Markdown", disable_web_page_preview=True)
 
-    def _assert_changelog(self, bot, message):
+    def _assert_about(self, bot, message):
         self._assert_mockbot(bot)
-        r = "https://github.com/GDGAracaju/GDGAjuBot/blob/master/CHANGELOG.md"
-        bot.send_message.assert_called_with(message.chat.id, r)
+        link = "https://github.com/GDGAracaju/GDGAjuBot/"
+        response = bot.send_message.call_args[0][1]
+        assert link in response
 
     def _assert_mockbot(self, bot):
         self.assertIsInstance(bot, MockTeleBot)

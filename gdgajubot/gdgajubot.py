@@ -344,10 +344,12 @@ class GDGAjuBot:
         else:
             self.bot.reply_to(message, text, **kwargs)
 
-    @commands('/changelog')
-    def changelog(self, message):
-        logging.info("%s: %s", message.from_user.username, "/changelog")
-        self.bot.send_message(message.chat.id, "https://github.com/GDGAracaju/GDGAjuBot/blob/master/CHANGELOG.md")
+    @commands('/about')
+    def about(self, message):
+        logging.info("%s: %s", message.from_user.username, "/about")
+        response = "Esse bot obtém informações de eventos do Meetup ou Facebook. "
+        response += "Para saber mais ou contribuir: https://github.com/GDGAracaju/GDGAjuBot/"
+        self.bot.send_message(message.chat.id, response)
 
     def love_ruby(self, message):
         """Easter Egg com o Ruby."""
