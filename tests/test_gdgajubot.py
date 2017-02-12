@@ -145,15 +145,17 @@ class TestGDGAjuBot(unittest.TestCase):
 
     def _assert_send_welcome(self, bot, message):
         self._assert_mockbot(bot)
-        bot.reply_to.assert_called_with(message, "Olá! Eu sou o bot do %s! Se precisar de ajuda: /help" % (self.config["group_name"]))
+        response = bot.reply_to.call_args[0][1]
+        assert '/help' in response
+        for group in self.config["group_name"]:
+            assert group in response
 
     def _assert_help_message(self, bot, message):
         self._assert_mockbot(bot)
-        help_message = "/help - Exibe essa mensagem.\n" \
-            "/book - Informa o ebook gratuito do dia na Packt Publishing.\n" \
-            "/events - Informa a lista de próximos eventos do {group_name}."
-        help_message = help_message.format(group_name=self.config["group_name"])
-        bot.reply_to.assert_called_with(message, help_message)
+        commands = ('/help', '/book', '/events', '/about')
+        response = bot.reply_to.call_args[0][1]
+        for command in commands:
+            assert command in response
 
     def _assert_list_upcoming_events(self, bot, message):
         self._assert_mockbot(bot)
