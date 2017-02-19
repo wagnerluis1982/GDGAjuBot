@@ -29,7 +29,8 @@ class Resources:
     }
 
     # Configuring cache
-    cache = CacheManager(**parse_cache_config_options({'cache.type': 'memory'}))
+    cache = CacheManager(
+        **parse_cache_config_options({'cache.type': 'memory'}))
 
     def __init__(self, config):
         self.config = config
@@ -66,7 +67,8 @@ class Resources:
 
             for event in events:
                 # convert time returned by Meetup API
-                event['time'] = datetime.datetime.fromtimestamp(event['time'] / 1000, tz=util.AJU_TZ)
+                event['time'] = datetime.datetime.fromtimestamp(
+                    event['time'] / 1000, tz=util.AJU_TZ)
                 # shorten url!
                 event['link'] = self.get_short_url(event['link'])
 
@@ -93,7 +95,8 @@ class Resources:
 
             for event in events:
                 # convert time returned by Facebook API
-                event['time'] = datetime.datetime.strptime(event.pop('start_time'), "%Y-%m-%dT%H:%M:%S%z")
+                event['time'] = datetime.datetime.strptime(
+                    event.pop('start_time'), "%Y-%m-%dT%H:%M:%S%z")
                 # create event link
                 link = "https://www.facebook.com/events/%s" % event.pop('id')
                 # shorten url!
@@ -116,15 +119,20 @@ class Resources:
 
         # Extracting information with html parser
         page = BeautifulSoup(content, 'html.parser')
-        dealoftheday = page.select_one('#deal-of-the-day div div div:nth-of-type(2)')
+        dealoftheday = page.select_one(
+            '#deal-of-the-day div div div:nth-of-type(2)')
 
         if not dealoftheday:
             return None
 
         book = util.AttributeDict()
-        book['name'] = dealoftheday.select_one('div:nth-of-type(2) h2').text.strip()
-        book['summary'] = dealoftheday.select_one('div:nth-of-type(3)').text.strip()
-        book['expires'] = int(dealoftheday.select_one('span.packt-js-countdown').attrs['data-countdown-to'])
+        book['name'] = dealoftheday.select_one(
+            'div:nth-of-type(2) h2').text.strip()
+        book['summary'] = dealoftheday.select_one(
+            'div:nth-of-type(3)').text.strip()
+        book['expires'] = int(dealoftheday.select_one(
+            'span.packt-js-countdown').attrs['data-countdown-to']
+        )
 
         return book
 
@@ -201,8 +209,10 @@ class GDGAjuBot:
 
         # Anexa uma função da API antiga para manter retrocompatibilidade
         self.bot.reply_to = lambda message, text, **kwargs: \
-            self.bot.send_message(chat_id=message.chat_id, text=text,
-                                  reply_to_message_id=message.message_id, **kwargs)
+            self.bot.send_message(
+                chat_id=message.chat_id, text=text,
+                reply_to_message_id=message.message_id, **kwargs
+            )
 
         # Configura os comandos aceitos pelo bot
         dispatcher = self.updater.dispatcher
@@ -243,7 +253,8 @@ class GDGAjuBot:
 
         self.bot.reply_to(
             message,
-            help_message.format(group_name=', '.join(self.config["group_name"]))
+            help_message.format(
+                group_name=', '.join(self.config["group_name"]))
         )
 
     @commands('/links')
@@ -272,9 +283,12 @@ class GDGAjuBot:
             if next_events:
                 response = self._format_events(next_events)
             else:
-                response = "Não há nenhum futuro evento do grupo %s." % self.config["group_name"]
-            self._smart_reply(message, response,
-                              parse_mode="Markdown", disable_web_page_preview=True)
+                response = "Não há nenhum futuro evento do grupo {0}.".format(
+                    self.config["group_name"])
+            self._smart_reply(
+                message, response,
+                parse_mode="Markdown", disable_web_page_preview=True
+            )
         except Exception as e:
             logging.exception(e)
 
@@ -297,13 +311,15 @@ class GDGAjuBot:
     def packtpub_free_learning(self, message, now=None):
         """Retorna o livro disponível no free-learning da editora PacktPub."""
         logging.info("%s: %s", message.from_user.username, "/book")
-        # Faz duas tentativas para obter o livro do dia, por questões de possível cache antigo.
+        # Faz duas tentativas para obter o livro do dia,
+        # por questões de possível cache antigo.
         for _ in range(2):
             book = self.resources.get_packt_free_book()
             response = self._book_response(book, now)
             if response:
                 break
-            Resources.cache.invalidate(Resources.get_packt_free_book, "get_packt_free_book")
+            Resources.cache.invalidate(
+                Resources.get_packt_free_book, "get_packt_free_book")
         # As tentativas falharam...
         else:
             response = "O livro de hoje ainda não está disponível"
@@ -323,7 +339,8 @@ class GDGAjuBot:
         if now is None:
             now = datetime.datetime.now(tz=util.AJU_TZ)
 
-        delta = datetime.datetime.fromtimestamp(book.expires, tz=util.AJU_TZ) - now
+        delta = datetime.datetime.fromtimestamp(
+            book.expires, tz=util.AJU_TZ) - now
         seconds = delta.total_seconds()
         if seconds < 0:
             return
@@ -341,17 +358,21 @@ class GDGAjuBot:
         return response
 
     def _smart_reply(self, message, text, **kwargs):
-        # On groups or supergroups, check if I have a recent previous response to refer
+        # On groups or supergroups, check if I have
+        # a recent previous response to refer
         if message.chat.type in ["group", "supergroup"]:
             # Retrieve from cache and set if necessary
             key = "p%s" % util.extract_command(text)
             previous_cache = Resources.cache.get_cache(key, expire=600)
             previous = previous_cache.get(key=message.chat.id, createfunc=dict)
 
-            # Verify if previous response is the same to send a contextual response
+            # Verify if previous response is the same
+            # to send a contextual response
             if previous.get('text') == text:
-                self.bot.send_message(message.chat.id, "Clique para ver a última resposta",
-                                      reply_to_message_id=previous['message_id'])
+                self.bot.send_message(
+                    message.chat.id, "Clique para ver a última resposta",
+                    reply_to_message_id=previous['message_id']
+                )
             # or, send new response and update the cache
             else:
                 sent = self.bot.reply_to(message, text, **kwargs)
@@ -392,7 +413,8 @@ class GDGAjuBot:
         if self.config["dev"]:
             logging.info("Modo do desenvolvedor ativado")
             logging.info("Usando o bot @%s", self.bot.get_me().username)
-            logging.info("Usando telegram_token=%(telegram_token)s", self.config)
+            logging.info(
+                "Usando telegram_token=%(telegram_token)s", self.config)
             logging.info("Usando meetup_key=%(meetup_key)s", self.config)
 
 
@@ -406,15 +428,33 @@ def main():
     # Configuring bot parameters
     logging.info("Configurando parâmetros")
     parser = util.ArgumentParser(description='Bot do GDG Aracaju')
-    parser.add_argument('-t', '--telegram_token', help='Token da API do Telegram', required=True)
-    parser.add_argument('-m', '--meetup_key', help='Key da API do Meetup')
-    parser.add_argument('-f', '--facebook_key', help='Key da API do Facebook')
-    parser.add_argument('-g', '--group_name', help='Grupo(s) do Meetup/Facebook, separados por vírgulas', required=True)
-    parser.add_argument('--url_shortener_key', help='Key da API do URL Shortener')
-    parser.add_argument('--events_source', choices=['meetup', 'facebook'])
-    parser.add_argument('-d', '--dev', help='Indicador de Debug/Dev mode', action='store_true')
-    parser.add_argument('--no-dev', help=argparse.SUPPRESS, dest='dev', action='store_false')
-    parser.add_argument('--remote_resources_url', help=argparse.SUPPRESS)
+    parser.add_argument(
+        '-t', '--telegram_token',
+        help='Token da API do Telegram', required=True)
+    parser.add_argument(
+        '-m', '--meetup_key',
+        help='Key da API do Meetup')
+    parser.add_argument(
+        '-f', '--facebook_key',
+        help='Key da API do Facebook')
+    parser.add_argument(
+        '-g', '--group_name',
+        help='Grupo(s) do Meetup/Facebook, separados por vírgulas',
+        required=True)
+    parser.add_argument(
+        '--url_shortener_key',
+        help='Key da API do URL Shortener')
+    parser.add_argument(
+        '--events_source', choices=['meetup', 'facebook'])
+    parser.add_argument(
+        '-d', '--dev',
+        help='Indicador de Debug/Dev mode', action='store_true')
+    parser.add_argument(
+        '--no-dev',
+        help=argparse.SUPPRESS, dest='dev', action='store_false')
+    parser.add_argument(
+        '--remote_resources_url',
+        help=argparse.SUPPRESS)
 
     # Parse command line args and get the config
     _config = parser.parse_args()
