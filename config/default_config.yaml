@@ -12,7 +12,7 @@ groups:
     meetup: "group_name_2"
     facebook: "group_name_2"
 links:
-  - link1: "url_1"
-  - link2: "url_2"
+  link1: "url_1"
+  link2: "url_2"
 custom_responses:
   - "/custom_1": "This is a custom bot command."

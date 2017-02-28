@@ -32,11 +32,13 @@ class BotConfig:
             ',') if events_source else self.events_source
         self.debug_mode = dev or self.debug_mode
         self.remote_resources_url = remote_resources_url
+        self.links = None or self.links
 
     def load_config_file(self, config_file):
         contents = yaml.load(config_file)
         self.debug_mode = contents.get('debug_mode', None)
         self.events_source = contents.get('events_source', None)
+        self.links = contents.get('links', ())
         if 'tokens' in contents:
             self.telegram_token = contents['tokens'].get('telegram', None)
             self.meetup_key = contents['tokens'].get('meetup', None)
