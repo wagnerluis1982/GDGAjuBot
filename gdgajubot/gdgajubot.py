@@ -36,7 +36,7 @@ class Resources:
         self.config = config
 
         # create delegate method based on choice
-        if config['events_source'] == 'meetup':
+        if 'meetup' in config.events_source:
             self.generate_events = self.meetup_events
         else:
             self.generate_events = self.facebook_events
@@ -49,14 +49,14 @@ class Resources:
         """Obtém eventos do Meetup."""
         # api v3 base url
         all_events = []
-        for group in self.config['group_name']:
+        for group in self.config.group_name:
             url = "https://api.meetup.com/{group}/events".format(
                 group=group
             )
 
             # response for the events
             r = requests.get(url, params={
-                'key': self.config['meetup_key'],
+                'key': self.config.meetup_key,
                 'status': 'upcoming',
                 'only': 'name,time,link',  # filter response to these fields
                 'page': n,                 # limit to n events
@@ -78,13 +78,13 @@ class Resources:
     def facebook_events(self, n):
         """Obtém eventos do Facebook."""
         all_events = []
-        for group in self.config['group_name']:
+        for group in self.config.group_name:
             # api v2.8 base url
             url = "https://graph.facebook.com/v2.8/%s/events" % group
 
             # response for the events
             r = requests.get(url, params={
-                'access_token': self.config['facebook_key'],
+                'access_token': self.config.facebook_key,
                 'since': 'today',
                 'fields': 'name,start_time',  # filter response to these fields
                 'limit': n,                   # limit to n events
@@ -138,7 +138,7 @@ class Resources:
 
     @cache.cache('get_social_links', expire=3600)
     def get_social_links(self):
-        remote_url = self.config['remote_resources_url']
+        remote_url = self.config.remote_resources_url
         if remote_url:
             url = remote_url + '/social_links.json'
             try:
@@ -154,11 +154,15 @@ class Resources:
     @cache.cache('get_short_url')
     def get_short_url(self, long_url):
         # Faz a requisição da URL curta somente se houver uma key configurada
-        if self.config['url_shortener_key']:
-            r = requests.post("https://www.googleapis.com/urlshortener/v1/url",
-                              params={'key': self.config['url_shortener_key'],
-                                      'fields': 'id'},
-                              json={'longUrl': long_url})
+        if self.config.url_shortener_key:
+            r = requests.post(
+                "https://www.googleapis.com/urlshortener/v1/url",
+                params={
+                    'key': self.config.url_shortener_key,
+                    'fields': 'id'
+                },
+                json={'longUrl': long_url}
+            )
             if r.status_code == 200:
                 return r.json()['id']
             else:
@@ -204,7 +208,7 @@ class GDGAjuBot:
             return
 
         # Conecta ao telegram com o token passado na configuração
-        self.updater = Updater(token=config['telegram_token'])
+        self.updater = Updater(token=config.telegram_token)
         self.bot = self.updater.bot
 
         # Anexa uma função da API antiga para manter retrocompatibilidade
@@ -236,7 +240,7 @@ class GDGAjuBot:
         """Mensagem de apresentação do bot."""
         logging.info("/start")
         start_message = "Olá! Eu sou o bot para %s! Se precisar de ajuda: /help" % (
-            ', '.join(self.config["group_name"]))
+            ', '.join(self.config.group_name))
         self.bot.reply_to(message, start_message)
 
     @commands('/help')
@@ -246,7 +250,7 @@ class GDGAjuBot:
         help_message = "/help - Exibe essa mensagem.\n" \
             "/about - Sobre o bot e como contribuir.\n" \
             "/book - Informa o ebook gratuito do dia na Packt Publishing.\n"
-        if len(self.config["group_name"]) > 1:
+        if len(self.config.group_name) > 1:
             help_message += "/events - Informa a lista de próximos eventos dos grupos: {group_name}."
         else:
             help_message += "/events - Informa a lista de próximos eventos do {group_name}."
@@ -254,7 +258,7 @@ class GDGAjuBot:
         self.bot.reply_to(
             message,
             help_message.format(
-                group_name=', '.join(self.config["group_name"]))
+                group_name=', '.join(self.config.group_name))
         )
 
     @commands('/links')
@@ -284,7 +288,7 @@ class GDGAjuBot:
                 response = self._format_events(next_events)
             else:
                 response = "Não há nenhum futuro evento do grupo {0}.".format(
-                    self.config["group_name"])
+                    self.config.group_name)
             self._smart_reply(
                 message, response,
                 parse_mode="Markdown", disable_web_page_preview=True
@@ -409,13 +413,14 @@ class GDGAjuBot:
     def start(self):
         self.updater.start_polling(clean=True)
         logging.info("GDGAjuBot iniciado")
-        logging.info("Este é o bot do %(group_name)s", self.config)
-        if self.config["dev"]:
+        logging.info("Este é o bot do {0}".format(self.config.group_name))
+        if self.config.debug_mode:
             logging.info("Modo do desenvolvedor ativado")
             logging.info("Usando o bot @%s", self.bot.get_me().username)
             logging.info(
-                "Usando telegram_token=%(telegram_token)s", self.config)
-            logging.info("Usando meetup_key=%(meetup_key)s", self.config)
+                "Usando telegram_token={0}".format(self.config.telegram_token))
+            logging.info(
+                "Usando meetup_key={0}".format(self.config.meetup_key))
 
 
 def main():
@@ -429,8 +434,11 @@ def main():
     logging.info("Configurando parâmetros")
     parser = util.ArgumentParser(description='Bot do GDG Aracaju')
     parser.add_argument(
+        '-c', '--config_file',
+        help='Arquivo de configuração', type=open)
+    parser.add_argument(
         '-t', '--telegram_token',
-        help='Token da API do Telegram', required=True)
+        help='Token da API do Telegram')
     parser.add_argument(
         '-m', '--meetup_key',
         help='Key da API do Meetup')
@@ -460,18 +468,13 @@ def main():
     _config = parser.parse_args()
 
     # Define the events source if needed
-    if not _config['events_source']:
-        if _config['meetup_key']:
-            _config['events_source'] = 'meetup'
-        elif _config['facebook_key']:
-            _config['events_source'] = 'facebook'
+    if not _config.events_source:
+        if _config.meetup_key:
+            _config.events_source = 'meetup'
+        elif _config.facebook_key:
+            _config.events_source = 'facebook'
         else:
             parser.error('an API key is needed to get events')
-
-    if ',' in _config['group_name']:
-        _config['group_name'] = _config['group_name'].split(',')
-    else:
-        _config['group_name'] = (_config['group_name'],)
 
     # Starting bot
     gdgbot = GDGAjuBot(_config)

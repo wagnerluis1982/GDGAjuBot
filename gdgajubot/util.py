@@ -5,6 +5,42 @@ import logging
 import os
 import re
 import threading
+import yaml
+
+
+class BotConfig:
+    def __init__(
+        self,
+        telegram_token=None,
+        meetup_key=None,
+        facebook_key=None,
+        group_name=None,
+        url_shortener_key=None,
+        events_source=None,
+        dev=True,
+        remote_resources_url=None,
+        config_file=None
+    ):
+        if config_file:
+            self.load_config_file(config_file)
+        self.telegram_token = telegram_token or self.telegram_token
+        self.meetup_key = meetup_key or self.meetup_key
+        self.facebook_key = facebook_key or self.facebook_key
+        self.group_name = group_name.split(',') if group_name else None
+        self.url_shortener_key = url_shortener_key
+        self.events_source = events_source.split(
+            ',') if events_source else self.events_source
+        self.debug_mode = dev or self.debug_mode
+        self.remote_resources_url = remote_resources_url
+
+    def load_config_file(self, config_file):
+        contents = yaml.load(config_file)
+        self.debug_mode = contents.get('debug_mode', None)
+        self.events_source = contents.get('events_source', None)
+        if 'tokens' in contents:
+            self.telegram_token = contents['tokens'].get('telegram', None)
+            self.meetup_key = contents['tokens'].get('meetup', None)
+            self.facebook_key = contents['tokens'].get('facebook', None)
 
 
 class HandlerHelper:
@@ -22,10 +58,11 @@ class HandlerHelper:
             return wrapped
         return decorator
 
-    def handle(self, name, *args, raises=False, **kwargs):
+    def handle(self, name, raises=False, *args, **kwargs):
         """Executa a função associada ao comando passado
 
-        :except: Exceções são relançadas se `raises` é `True`, do contrário, são enviadas ao log.
+        :except: Exceções são relançadas se `raises` é `True`,
+                 do contrário, são enviadas ao log.
         :return: `True` ou `False` indicando que o comando foi executado
         """
         function = self.functions.get(name)
@@ -82,6 +119,7 @@ class TimeZone:
             cls.timezones[hours] = cls.TZ(hours)
         return cls.timezones[hours]
 
+
 # aliases úteis
 AJU_TZ = TimeZone.gmt(-3)
 
@@ -126,13 +164,17 @@ class ArgumentParser(argparse.ArgumentParser):
         namespace = super().parse_args(*args, **kwargs)
 
         # Mounting config
-        config = {k: v or os.environ.get(k.upper(), '')
-                  for k, v in vars(namespace).items()}
+        config_dict = {
+            k: v or os.environ.get(k.upper(), '')
+            for k, v in vars(namespace).items()
+        }
 
         # Verifying required arguments
-        missing_args = [argparse._get_action_name(a)
-                        for a in self._required_actions if not config[a.dest]]
+        missing_args = [
+            argparse._get_action_name(a)
+            for a in self._required_actions if not config_dict[a.dest]
+        ]
         if missing_args:
             self.error("missing arguments: " + ", ".join(missing_args))
 
-        return config
+        return BotConfig(**config_dict)
