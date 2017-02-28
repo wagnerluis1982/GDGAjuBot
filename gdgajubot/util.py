@@ -18,7 +18,6 @@ class BotConfig:
         url_shortener_key=None,
         events_source=None,
         dev=True,
-        remote_resources_url=None,
         config_file=None
     ):
         if config_file:
@@ -31,7 +30,6 @@ class BotConfig:
         self.events_source = events_source.split(
             ',') if events_source else self.events_source
         self.debug_mode = dev or self.debug_mode
-        self.remote_resources_url = remote_resources_url
         self.links = None or self.links
 
     def load_config_file(self, config_file):
