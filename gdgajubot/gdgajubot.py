@@ -420,7 +420,7 @@ def main():
     parser = util.ArgumentParser(description='Bot do GDG Aracaju')
     parser.add_argument(
         '-c', '--config_file',
-        help='Arquivo de configuração', type=open)
+        help='Arquivo de configuração')
     parser.add_argument(
         '-t', '--telegram_token',
         help='Token da API do Telegram')

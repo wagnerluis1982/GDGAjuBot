@@ -1,3 +1,5 @@
+from urllib import parse
+import requests
 import argparse
 import datetime
 import functools
@@ -33,7 +35,8 @@ class BotConfig:
         self.links = None or self.links
 
     def load_config_file(self, config_file):
-        contents = yaml.load(config_file)
+        stream = self.open_file_or_url(config_file)
+        contents = yaml.load(stream)
         self.debug_mode = contents.get('debug_mode', None)
         self.events_source = contents.get('events_source', None)
         self.links = contents.get('links', ())
@@ -41,6 +44,13 @@ class BotConfig:
             self.telegram_token = contents['tokens'].get('telegram', None)
             self.meetup_key = contents['tokens'].get('meetup', None)
             self.facebook_key = contents['tokens'].get('facebook', None)
+
+    def open_file_or_url(self, file_or_url):
+        if bool(parse.urlparse(file_or_url).netloc):
+            return requests.get(file_or_url).text
+        else:
+            with open(file_or_url, 'r') as config_file:
+                return config_file.read()
 
 
 class HandlerHelper:
