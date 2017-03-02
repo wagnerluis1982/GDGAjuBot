@@ -174,10 +174,10 @@ commands = util.HandlerHelper()
 
 
 # Adapta a assinatura de função esperada por `add_handler` na API nova
-def adapt_callback(cb, *args):
+def adapt_callback(cb, *args, **kwargs):
     if args:
-        cb = functools.partial(cb, *args)
-    return lambda _, u: cb(u.message)
+        cb = functools.partial(cb, *args, **kwargs)
+    return lambda _, u, *args, **kwargs: cb(u.message, *args, **kwargs)
 
 
 class GDGAjuBot:
@@ -209,6 +209,17 @@ class GDGAjuBot:
             dispatcher.add_handler(
                 CommandHandler(name, adapt_callback(function, self)))
 
+        if self.config.custom_responses:
+            for command, response in self.config.custom_responses.items():
+                name = command.replace('/', '')
+                custom = functools.partial(
+                    adapt_callback(self.custom_response_template),
+                    command=name, response_text=response
+                )
+                dispatcher.add_handler(
+                    CommandHandler(name, custom)
+                )
+
         # Configura as easter eggs
         easter_eggs = (
             (find_ruby, self.love_ruby),
@@ -218,6 +229,12 @@ class GDGAjuBot:
         for search, action in easter_eggs:
             dispatcher.add_handler(
                 MessageHandler(FilterSearch(search), adapt_callback(action)))
+
+    def custom_response_template(
+        self, message, *args, command='', response_text=''
+    ):
+        logging.info(command)
+        self.bot.reply_to(message, response_text)
 
     @commands('/start')
     def send_welcome(self, message):

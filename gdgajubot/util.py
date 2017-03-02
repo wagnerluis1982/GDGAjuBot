@@ -33,6 +33,7 @@ class BotConfig:
             ',') if events_source else self.events_source
         self.debug_mode = dev or self.debug_mode
         self.links = None or self.links
+        self.custom_responses = None or self.custom_responses
 
     def load_config_file(self, config_file):
         stream = self.open_file_or_url(config_file)
@@ -40,6 +41,7 @@ class BotConfig:
         self.debug_mode = contents.get('debug_mode', None)
         self.events_source = contents.get('events_source', None)
         self.links = contents.get('links', ())
+        self.custom_responses = contents.get('custom_responses', None)
         if 'tokens' in contents:
             self.telegram_token = contents['tokens'].get('telegram', None)
             self.meetup_key = contents['tokens'].get('meetup', None)
