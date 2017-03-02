@@ -22,18 +22,18 @@ class BotConfig:
         dev=True,
         config_file=None
     ):
-        if config_file:
-            self.load_config_file(config_file)
-        self.telegram_token = telegram_token or self.telegram_token
-        self.meetup_key = meetup_key or self.meetup_key
-        self.facebook_key = facebook_key or self.facebook_key
+        self.telegram_token = telegram_token
+        self.meetup_key = meetup_key
+        self.facebook_key = facebook_key
         self.group_name = group_name.split(',') if group_name else None
         self.url_shortener_key = url_shortener_key
         self.events_source = events_source.split(
-            ',') if events_source else self.events_source
-        self.debug_mode = dev or self.debug_mode
-        self.links = None or self.links
-        self.custom_responses = None or self.custom_responses
+            ',') if events_source else None
+        self.debug_mode = dev
+        self.links = None
+        self.custom_responses = None
+        if config_file:
+            self.load_config_file(config_file)
 
     def load_config_file(self, config_file):
         stream = self.open_file_or_url(config_file)
