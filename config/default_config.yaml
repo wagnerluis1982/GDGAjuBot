@@ -4,13 +4,6 @@ tokens:
   telegram: "TELEGRAM_TOKEN"
   facebook: "FACEBOOK_API_KEY"
   meetup: "MEETUP_API_KEY"
-groups:
-  - 
-    meetup: "group_name_1"
-    facebook: "group_name_1"
-  -
-    meetup: "group_name_2"
-    facebook: "group_name_2"
 links:
   link1: "url_1"
   link2: "url_2"
