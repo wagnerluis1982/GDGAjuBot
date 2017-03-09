@@ -2,3 +2,4 @@ Beaker==1.8.1
 beautifulsoup4==4.5.3
 python-telegram-bot==5.3.0
 requests==2.12.5
+PyYAML==3.12

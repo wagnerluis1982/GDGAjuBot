@@ -1,0 +1,11 @@
+debug_mode: true
+events_source: meetup
+tokens:
+  telegram: "TELEGRAM_TOKEN"
+  facebook: "FACEBOOK_API_KEY"
+  meetup: "MEETUP_API_KEY"
+links:
+  link1: "url_1"
+  link2: "url_2"
+custom_responses:
+  "/custom_1": "This is a custom bot command."

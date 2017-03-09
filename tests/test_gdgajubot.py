@@ -63,7 +63,7 @@ class MockResources:
 
 
 class TestGDGAjuBot(unittest.TestCase):
-    config = {'group_name': 'Test-Bot'}
+    config = util.BotConfig(group_name='Test-Bot')
 
     # Regular expressions tests
 
@@ -147,7 +147,7 @@ class TestGDGAjuBot(unittest.TestCase):
         self._assert_mockbot(bot)
         response = bot.reply_to.call_args[0][1]
         assert '/help' in response
-        for group in self.config["group_name"]:
+        for group in self.config.group_name:
             assert group in response
 
     def _assert_help_message(self, bot, message):
