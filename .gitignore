@@ -6,3 +6,4 @@ bot.log
 build/
 dist/
 *.bat
+.env
