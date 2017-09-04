@@ -132,6 +132,13 @@ class Resources:
         book['expires'] = int(dealoftheday.select_one(
             'span.packt-js-countdown').attrs['data-countdown-to']
         )
+        image_source = page.select_one(
+            '#deal-of-the-day > div > div > '
+            'div.dotd-main-book-image.float-left > a > img'
+        ).attrs.get('data-original', None)
+        if image_source and image_source.startswith('//'):
+            image_source = 'https:{0}'.format(image_source)
+        book['cover'] = image_source
 
         return book
 
@@ -329,8 +336,11 @@ class GDGAjuBot:
         # As tentativas falharam...
         else:
             response = "O livro de hoje ainda não está disponível"
-        self._smart_reply(message, response,
-                          parse_mode="Markdown", disable_web_page_preview=True)
+        self._smart_reply(
+            message, response,
+            parse_mode="Markdown", disable_web_page_preview=True,
+            send_picture=book['cover'] if book else None
+        )
 
     timeleft = ((30, '30 segundos'),
                 (60, '1 minuto'),
@@ -381,12 +391,16 @@ class GDGAjuBot:
                 )
             # or, send new response and update the cache
             else:
+                if 'send_picture' in kwargs:
+                    self.bot.send_photo(chat_id=message.chat_id, photo=kwargs['send_picture'])
                 sent = self.bot.reply_to(message, text, **kwargs)
                 previous.update({'text': text, 'message_id': sent.message_id})
                 previous_cache[message.chat.id] = previous  # reset expire time
 
         # On private chats or channels, send the normal reply...
         else:
+            if 'send_picture' in kwargs:
+                self.bot.send_photo(chat_id=message.chat_id, photo=kwargs['send_picture'])
             self.bot.reply_to(message, text, **kwargs)
 
     @commands('/about')
