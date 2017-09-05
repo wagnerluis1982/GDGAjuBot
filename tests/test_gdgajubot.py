@@ -219,4 +219,5 @@ class TestResources(unittest.TestCase):
         self.assertEqual(gdgajubot.Resources.extract_packt_free_book(content),
                          {'name': "Oracle Enterprise Manager 12c Administration Cookbook",
                           'summary': "Over 50 practical recipes to install, configure, and monitor your Oracle setup using Oracle Enterprise Manager",
+                          'book': "https://d1ldz4te4covpm.cloudfront.net/sites/default/files/imagecache/dotd_main_image/7409EN.jpg",
                           'expires': 1459378800})
