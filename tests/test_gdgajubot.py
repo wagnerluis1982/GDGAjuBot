@@ -52,6 +52,7 @@ class MockResources:
     book = util.AttributeDict(
         name="Android 2099",
         summary="Good practices with Miguel O’Hara",
+        cover='//test.jpg',
         expires=4091565600,
     )
 
@@ -173,7 +174,7 @@ class TestGDGAjuBot(unittest.TestCase):
         r = ("Confira o livro gratuito de hoje da Packt Publishing 🎁\n\n"
              "📖 [Android 2099](https://www.packtpub.com/packt/offers/free-learning)\n"
              "🔎 Good practices with Miguel O’Hara\n") + warning
-        bot.reply_to.assert_called_with(message, r, parse_mode="Markdown", disable_web_page_preview=True)
+        bot.reply_to.assert_called_with(message, r, parse_mode="Markdown", disable_web_page_preview=True, send_picture='//test.jpg')
 
     def _assert_about(self, bot, message):
         self._assert_mockbot(bot)
@@ -219,4 +220,5 @@ class TestResources(unittest.TestCase):
         self.assertEqual(gdgajubot.Resources.extract_packt_free_book(content),
                          {'name': "Oracle Enterprise Manager 12c Administration Cookbook",
                           'summary': "Over 50 practical recipes to install, configure, and monitor your Oracle setup using Oracle Enterprise Manager",
+                          'cover': "https://d1ldz4te4covpm.cloudfront.net/sites/default/files/imagecache/dotd_main_image/7409EN.jpg",
                           'expires': 1459378800})
