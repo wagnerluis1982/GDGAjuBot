@@ -125,22 +125,24 @@ class Resources:
             return None
 
         book = util.AttributeDict()
-        book['name'] = dealoftheday.select_one(
-            'div:nth-of-type(2) h2').text.strip()
-        book['summary'] = dealoftheday.select_one(
-            'div:nth-of-type(3)').text.strip()
-        book['expires'] = int(dealoftheday.select_one(
-            'span.packt-js-countdown').attrs['data-countdown-to']
-        )
-        image_source = page.select_one(
-            '#deal-of-the-day > div > div > '
-            'div.dotd-main-book-image.float-left > a > img'
-        ).attrs.get('data-original', None)
-        if image_source and image_source.startswith('//'):
-            image_source = 'https:{0}'.format(image_source)
-        book['cover'] = image_source
-
-        return book
+        try:
+            book['name'] = dealoftheday.select_one(
+                'div:nth-of-type(2) h2').text.strip()
+            book['summary'] = dealoftheday.select_one(
+                'div:nth-of-type(3)').text.strip()
+            book['expires'] = int(dealoftheday.select_one(
+                'span.packt-js-countdown').attrs['data-countdown-to']
+            )
+            image_source = page.select_one(
+                '#deal-of-the-day > div > div > '
+                'div.dotd-main-book-image.float-left > a > img'
+            ).attrs.get('data-original', None)
+            if image_source and image_source.startswith('//'):
+                image_source = 'https:{0}'.format(image_source)
+            book['cover'] = image_source
+            return book
+        except:
+            return None
 
     @cache.cache('get_short_url')
     def get_short_url(self, long_url):
