@@ -376,6 +376,12 @@ class GDGAjuBot:
         return response
 
     def _smart_reply(self, message, text, **kwargs):
+        def send_book():
+            picture = kwargs.get('send_picture')
+            if picture:
+                self.bot.send_photo(chat_id=message.chat_id, photo=picture)
+            return self.bot.reply_to(message, text, **kwargs)
+
         # On groups or supergroups, check if I have
         # a recent previous response to refer
         if message.chat.type in ["group", "supergroup"]:
@@ -393,19 +399,13 @@ class GDGAjuBot:
                 )
             # or, send new response and update the cache
             else:
-                picture = kwargs.get('send_picture')
-                if picture:
-                    self.bot.send_photo(chat_id=message.chat_id, photo=picture)
-                sent = self.bot.reply_to(message, text, **kwargs)
+                sent = send_book()
                 previous.update({'text': text, 'message_id': sent.message_id})
                 previous_cache[message.chat.id] = previous  # reset expire time
 
         # On private chats or channels, send the normal reply...
         else:
-            picture = kwargs.get('send_picture')
-            if picture:
-                self.bot.send_photo(chat_id=message.chat_id, photo=picture)
-            self.bot.reply_to(message, text, **kwargs)
+            send_book()
 
     @commands('/about')
     def about(self, message):
