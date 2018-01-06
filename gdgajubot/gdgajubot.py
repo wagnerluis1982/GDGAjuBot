@@ -393,16 +393,18 @@ class GDGAjuBot:
                 )
             # or, send new response and update the cache
             else:
-                if 'send_picture' in kwargs:
-                    self.bot.send_photo(chat_id=message.chat_id, photo=kwargs['send_picture'])
+                picture = kwargs.get('send_picture')
+                if picture:
+                    self.bot.send_photo(chat_id=message.chat_id, photo=picture)
                 sent = self.bot.reply_to(message, text, **kwargs)
                 previous.update({'text': text, 'message_id': sent.message_id})
                 previous_cache[message.chat.id] = previous  # reset expire time
 
         # On private chats or channels, send the normal reply...
         else:
-            if 'send_picture' in kwargs:
-                self.bot.send_photo(chat_id=message.chat_id, photo=kwargs['send_picture'])
+            picture = kwargs.get('send_picture')
+            if picture:
+                self.bot.send_photo(chat_id=message.chat_id, photo=picture)
             self.bot.reply_to(message, text, **kwargs)
 
     @commands('/about')
