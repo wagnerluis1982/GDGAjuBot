@@ -337,7 +337,8 @@ class GDGAjuBot:
                 Resources.get_packt_free_book, "get_packt_free_book")
         # As tentativas falharam...
         else:
-            response = "O livro de hoje ainda não está disponível"
+            response = "Parece que não tem um livro grátis hoje 😡\n\n" \
+                       "Se acha que é um erro meu, veja com seus próprios olhos em " + Resources.BOOK_URL
         self._smart_reply(
             message, response,
             parse_mode="Markdown", disable_web_page_preview=True,
@@ -352,7 +353,7 @@ class GDGAjuBot:
 
     def _book_response(self, book, now=None):
         if book is None:
-            return Resources.BOOK_URL
+            return
 
         if now is None:
             now = datetime.datetime.now(tz=util.AJU_TZ)
