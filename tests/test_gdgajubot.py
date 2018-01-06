@@ -16,7 +16,7 @@ MockMessage = mock.NonCallableMock
 
 
 class MockResources:
-    def __init__(self):
+    def __init__(self, book=None):
         # Falso cache de eventos
         self.cache_events = [
             {'link': 'http://www.meetup.com/GDG-Aracaju/events/229313880/',
@@ -44,6 +44,9 @@ class MockResources:
              'name': 'Google IO Extended 2016',
              'time': datetime.fromtimestamp(1463608800, AJU_TZ)},
         ]
+
+        if book is False:
+            self.book = None
 
     def get_events(self, n):
         return self.cache_events[:n]
@@ -137,6 +140,16 @@ class TestGDGAjuBot(unittest.TestCase):
 
         g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 29, tz=AJU_TZ))
         self._assert_packtpub_free_learning(bot, message, warning="30 segundos")
+
+    def test_books_unavailable(self):
+        bot, resources, message = MockTeleBot(), MockResources(book=False), MockMessage()
+        g_bot = gdgajubot.GDGAjuBot(self.config, bot, resources)
+
+        r = "Parece que não tem um livro grátis hoje 😡\n\n" \
+            "Se acha que é um erro meu, veja com seus próprios olhos em https://www.packtpub.com/packt/offers/free-learning"
+
+        g_bot.packtpub_free_learning(message)
+        bot.reply_to.assert_called_with(message, r, parse_mode="Markdown", disable_web_page_preview=True, send_picture=None)
 
     def test_about(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage(id=0xB00B)
