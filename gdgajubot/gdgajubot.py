@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """Bot do GDG-Aracaju."""
 import argparse
-import logging
-import re
 import datetime
 import functools
+import logging
+import re
+from random import randint
 
 import requests
 import requests.exceptions
 from beaker.cache import CacheManager
 from beaker.util import parse_cache_config_options
 from bs4 import BeautifulSoup
-from telegram.ext import CommandHandler
-from telegram.ext import Updater
+from telegram.ext import CommandHandler, Updater
 from telegram.ext.filters import BaseFilter, Filters
 from telegram.ext.messagehandler import MessageHandler
 
@@ -415,19 +415,31 @@ class GDGAjuBot:
         response += "Para saber mais ou contribuir: https://github.com/GDGAracaju/GDGAjuBot/"
         self.bot.send_message(message.chat.id, response)
 
+    def should_send_easter_egg(self):
+        return randint(0,100) < 30
+
     def love_ruby(self, message):
         """Easter Egg com o Ruby."""
+        if not self.should_send_easter_egg():
+            return
         logging.info("%s: %s", message.from_user.username, "ruby")
         username = message.from_user.username
-        self.bot.send_message(message.chat.id, username + " ama Ruby <3")
+        self.bot.send_message(
+            message.chat.id,
+            "@{} ama Ruby... ou Rails?".format(username),
+        )
 
     def memory_java(self, message):
         """Easter Egg com o Java."""
+        if not self.should_send_easter_egg():
+            return
         logging.info("%s: %s", message.from_user.username, "java")
         self.bot.send_message(message.chat.id, "Ihh... acabou a RAM")
 
     def easter_python(self, message):
         """Easter Egg com o Python."""
+        if not self.should_send_easter_egg():
+            return
         logging.info("%s: %s", message.from_user.username, "python")
         self.bot.send_message(message.chat.id, "import antigravity")
 
