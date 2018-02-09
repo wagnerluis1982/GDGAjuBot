@@ -5,6 +5,7 @@ chardet==3.0.4
 future==0.16.0
 idna==2.6
 MarkupSafe==0.23
+pony==0.7.3
 py==1.4.31
 pytest==2.8.5
 python-telegram-bot==8.0

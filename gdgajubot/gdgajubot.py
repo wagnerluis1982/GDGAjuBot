@@ -18,6 +18,7 @@ from telegram.ext.messagehandler import MessageHandler
 
 from . util import do_not_spam
 from . import util
+from .database import db, orm, Message, User
 
 
 class Resources:
@@ -240,6 +241,14 @@ class GDGAjuBot:
             dispatcher.add_handler(
                 MessageHandler(FilterSearch(search), adapt_callback(action)))
 
+        dispatcher.add_handler(
+            MessageHandler(
+                filters=None,
+                callback=adapt_callback(self.extract_and_save_data),
+            ),
+            group=1,
+        )
+
     def custom_response_template(
         self, message, *args, command='', response_text=''
     ):
@@ -322,6 +331,19 @@ class GDGAjuBot:
 
             response.append("[%(name)s](%(link)s): %(time)s" % event)
         return '\n'.join(response)
+
+    @orm.db_session
+    def extract_and_save_data(self, message, *args, **kwargs):
+        try:
+            user = User[message.from_user.id]
+        except orm.ObjectNotFound:
+            user = User(
+                telegram_id=message.from_user.id,
+                telegram_username=message.from_user.username,
+            )
+        Message(
+            sent_by=user, text=message.text, sent_at=message.date,
+        )
 
     @commands('/book')
     def packtpub_free_learning(self, message, now=None):
