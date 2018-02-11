@@ -1,12 +1,14 @@
-from urllib import parse
-import requests
 import argparse
 import datetime
 import functools
 import logging
 import os
+import random
 import re
 import threading
+from urllib import parse
+
+import requests
 import yaml
 
 
@@ -103,6 +105,14 @@ def extract_command(text):
     match = match_command(text)
     if match:
         return match.group(1).split()[0].split('@')[0]
+
+
+def do_not_spam(func):
+    @functools.wraps(func)
+    def func_wrapper(*args, **kwargs):
+        if random.randint(0,100) < 30:
+            return func(*args, **kwargs)
+    return func_wrapper
 
 
 class TimeZone:
