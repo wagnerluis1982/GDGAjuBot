@@ -4,6 +4,7 @@ import argparse
 import datetime
 import functools
 import logging
+import random
 import re
 
 import requests
@@ -376,6 +377,12 @@ class GDGAjuBot:
                 return response + warning
         return response
 
+    already_answered_texts = (
+        "Ei, olhe, acabei de responder!",
+        "Me reservo ao direito de não responder!",
+        "Deixe de insistência!",
+    )
+
     def _send_smart_reply(self, message, text, **kwargs):
         def send_message():
             picture = kwargs.get('send_picture')
@@ -395,7 +402,7 @@ class GDGAjuBot:
             # to send a contextual response
             if previous.get('text') == text:
                 self.bot.send_message(
-                    message.chat.id, "Clique para ver a última resposta",
+                    message.chat.id, random.choice(self.already_answered_texts),
                     reply_to_message_id=previous['message_id']
                 )
             # or, send new response and update the cache
