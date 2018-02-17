@@ -114,7 +114,7 @@ class TestGDGAjuBot(unittest.TestCase):
         # Garante que o cache mutável não gerará uma exceção
         n_calls = len(bot.method_calls)
         g_bot.list_upcoming_events(message)
-        self.assertGreater(len(bot.method_calls), n_calls)
+        assert len(bot.method_calls) > n_calls
 
     def test_packtpub_free_learning(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
@@ -196,7 +196,7 @@ class TestGDGAjuBot(unittest.TestCase):
         assert link in response
 
     def _assert_mockbot(self, bot):
-        self.assertIsInstance(bot, MockTeleBot)
+        assert isinstance(bot, MockTeleBot)
 
     # Internals tests
 
@@ -208,9 +208,9 @@ class TestGDGAjuBot(unittest.TestCase):
 
         # Mensagens privadas não fazem link
         message.chat.type = "private"
-        g_bot._smart_reply(message, text)
+        g_bot._send_smart_reply(message, text)
         bot.reply_to.assert_called_with(message, text)
-        g_bot._smart_reply(message, text)
+        g_bot._send_smart_reply(message, text)
         bot.reply_to.assert_called_with(message, text)
 
         # Configurando MockTeleBot.reply_to() para retornar um MockMessage com um message_id
@@ -218,11 +218,13 @@ class TestGDGAjuBot(unittest.TestCase):
 
         # Mensagens de grupo fazem link
         message.chat.type = "group"
-        g_bot._smart_reply(message, text)
+        g_bot._send_smart_reply(message, text)
         bot.reply_to.assert_called_with(message, text)
-        g_bot._smart_reply(message, text)
-        bot.send_message.assert_called_with(message.chat.id, "Clique para ver a última resposta",
+        g_bot._send_smart_reply(message, text)
+        bot.send_message.assert_called_with(message.chat.id, mock.ANY,
                                             reply_to_message_id=82)
+        the_answer = bot.send_message.call_args[0][1]
+        assert the_answer in gdgajubot.GDGAjuBot.already_answered_texts
 
 
 class TestResources(unittest.TestCase):
@@ -230,8 +232,9 @@ class TestResources(unittest.TestCase):
 
     def test_extract_packt_free_book(self):
         content = open(os.path.join(self.cd, 'packtpub-free-learning.html.fixture'), 'rb')
-        self.assertEqual(gdgajubot.Resources.extract_packt_free_book(content),
-                         {'name': "Oracle Enterprise Manager 12c Administration Cookbook",
-                          'summary': "Over 50 practical recipes to install, configure, and monitor your Oracle setup using Oracle Enterprise Manager",
-                          'cover': "https://d1ldz4te4covpm.cloudfront.net/sites/default/files/imagecache/dotd_main_image/7409EN.jpg",
-                          'expires': 1459378800})
+        result = {'name': "Oracle Enterprise Manager 12c Administration Cookbook",
+                  'summary': "Over 50 practical recipes to install, configure, and monitor your Oracle setup using Oracle Enterprise Manager",
+                  'cover': "https://d1ldz4te4covpm.cloudfront.net/sites/default/files/imagecache/dotd_main_image/7409EN.jpg",
+                  'expires': 1459378800}
+
+        assert gdgajubot.Resources.extract_packt_free_book(content) == result
