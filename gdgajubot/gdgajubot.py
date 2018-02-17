@@ -285,7 +285,7 @@ class GDGAjuBot:
                 )
         else:
             response = 'Não existem links associados a esse grupo.'
-        self._smart_reply(
+        self._send_smart_reply(
             message, response,
             parse_mode="Markdown", disable_web_page_preview=True)
 
@@ -300,7 +300,7 @@ class GDGAjuBot:
             else:
                 response = "Não há nenhum futuro evento do grupo {0}.".format(
                     self.config.group_name)
-            self._smart_reply(
+            self._send_smart_reply(
                 message, response,
                 parse_mode="Markdown", disable_web_page_preview=True
             )
@@ -330,7 +330,7 @@ class GDGAjuBot:
         # por questões de possível cache antigo.
         for _ in range(2):
             book = self.resources.get_packt_free_book()
-            response = self._book_response(book, now)
+            response = self._create_book_response(book, now)
             if response:
                 break
             Resources.cache.invalidate(
@@ -339,7 +339,7 @@ class GDGAjuBot:
         else:
             response = "Parece que não tem um livro grátis hoje 😡\n\n" \
                        "Se acha que é um erro meu, veja com seus próprios olhos em " + Resources.BOOK_URL
-        self._smart_reply(
+        self._send_smart_reply(
             message, response,
             parse_mode="Markdown", disable_web_page_preview=True,
             send_picture=book['cover'] if book else None
@@ -351,7 +351,7 @@ class GDGAjuBot:
                 (1800, 'meia hora'),
                 (3600, '1 hora'))
 
-    def _book_response(self, book, now=None):
+    def _create_book_response(self, book, now=None):
         if book is None:
             return
 
@@ -376,8 +376,8 @@ class GDGAjuBot:
                 return response + warning
         return response
 
-    def _smart_reply(self, message, text, **kwargs):
-        def send_book():
+    def _send_smart_reply(self, message, text, **kwargs):
+        def send_message():
             picture = kwargs.get('send_picture')
             if picture:
                 self.bot.send_photo(chat_id=message.chat_id, photo=picture)
@@ -400,13 +400,13 @@ class GDGAjuBot:
                 )
             # or, send new response and update the cache
             else:
-                sent = send_book()
+                sent = send_message()
                 previous.update({'text': text, 'message_id': sent.message_id})
                 previous_cache[message.chat.id] = previous  # reset expire time
 
         # On private chats or channels, send the normal reply...
         else:
-            send_book()
+            send_message()
 
     @commands('/about')
     def about(self, message):

@@ -208,9 +208,9 @@ class TestGDGAjuBot(unittest.TestCase):
 
         # Mensagens privadas não fazem link
         message.chat.type = "private"
-        g_bot._smart_reply(message, text)
+        g_bot._send_smart_reply(message, text)
         bot.reply_to.assert_called_with(message, text)
-        g_bot._smart_reply(message, text)
+        g_bot._send_smart_reply(message, text)
         bot.reply_to.assert_called_with(message, text)
 
         # Configurando MockTeleBot.reply_to() para retornar um MockMessage com um message_id
@@ -218,9 +218,9 @@ class TestGDGAjuBot(unittest.TestCase):
 
         # Mensagens de grupo fazem link
         message.chat.type = "group"
-        g_bot._smart_reply(message, text)
+        g_bot._send_smart_reply(message, text)
         bot.reply_to.assert_called_with(message, text)
-        g_bot._smart_reply(message, text)
+        g_bot._send_smart_reply(message, text)
         bot.send_message.assert_called_with(message.chat.id, "Clique para ver a última resposta",
                                             reply_to_message_id=82)
 
