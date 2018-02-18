@@ -224,7 +224,7 @@ class TestGDGAjuBot(unittest.TestCase):
         bot.send_message.assert_called_with(message.chat.id, mock.ANY,
                                             reply_to_message_id=82)
         the_answer = bot.send_message.call_args[0][1]
-        assert the_answer in gdgajubot.GDGAjuBot.already_answered_texts
+        assert the_answer[2:] in gdgajubot.GDGAjuBot.already_answered_texts
 
 
 class TestResources(unittest.TestCase):

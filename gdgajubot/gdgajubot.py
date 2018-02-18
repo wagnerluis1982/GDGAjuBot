@@ -402,7 +402,7 @@ class GDGAjuBot:
             # to send a contextual response
             if previous.get('text') == text:
                 self.bot.send_message(
-                    message.chat.id, random.choice(self.already_answered_texts),
+                    message.chat.id, '👆 ' + random.choice(self.already_answered_texts),
                     reply_to_message_id=previous['message_id']
                 )
             # or, send new response and update the cache
