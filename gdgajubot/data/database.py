@@ -66,7 +66,9 @@ class User(db.Entity):
     telegram_username = orm.Required(str)
     is_bot_admin = orm.Required(bool, default=False)
     messages = orm.Set('Message')
-    scheduled_actions = orm.Set('ScheduledAction')
+
+    def __str__(self):
+        return 'User - @{}'.format(self.telegram_username)
 
 
 class Message(db.Entity):
@@ -74,15 +76,17 @@ class Message(db.Entity):
     sent_at = orm.Required(datetime)
     sent_by = orm.Required(User)
 
+    def __str__(self):
+        return 'Message - {} @ {}: {}'.format(
+            self.sent_by.telegram_username,
+            self.sent_at.strftime('%c'),
+            self.text,
+        )
 
-class ScheduledAction(db.Entity):
-    scheduled_by = orm.Required(User)
-    daily = orm.Required(bool)
-    action = Choice(choices={
-        'noop': 'noop',
-    })
 
+class Group(db.Entity):
+    telegram_id = orm.PrimaryKey(int)
+    telegram_groupname = orm.Optional(str)
 
-db.bind(provider='sqlite', filename='database.sqlite', create_db=True)
-db.provider.converter_classes.append((Choice, ChoiceConverter))
-db.generate_mapping(create_tables=True)
+    def __str__(self):
+        return 'Group - {}'.format(self.telegram_groupname)

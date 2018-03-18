@@ -11,6 +11,12 @@ from urllib import parse
 import requests
 import yaml
 
+DEFAULT_DATABASE = {
+    'provider': 'sqlite',
+    'filename': 'database.sqlite',
+    'create_db': True,
+}
+
 
 class BotConfig:
     def __init__(
@@ -22,7 +28,7 @@ class BotConfig:
         url_shortener_key=None,
         events_source=None,
         dev=True,
-        config_file=None
+        config_file=None,
     ):
         self.telegram_token = telegram_token
         self.meetup_key = meetup_key
@@ -48,6 +54,10 @@ class BotConfig:
             self.telegram_token = contents['tokens'].get('telegram', None)
             self.meetup_key = contents['tokens'].get('meetup', None)
             self.facebook_key = contents['tokens'].get('facebook', None)
+        if 'database' in contents:
+            self.database = contents['database']
+        else:
+            self.database = DEFAULT_DATABASE
 
     def open_file_or_url(self, file_or_url):
         if bool(parse.urlparse(file_or_url).netloc):
