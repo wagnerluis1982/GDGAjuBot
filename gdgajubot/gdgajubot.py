@@ -11,9 +11,9 @@ from telegram.ext import CommandHandler, Updater
 from telegram.ext.filters import BaseFilter, Filters
 from telegram.ext.messagehandler import MessageHandler
 
+from gdgajubot.data.resources import Resources
 from . util import do_not_spam
 from . import util
-from gdgajubot.data.resources import Resources
 
 
 class FilterSearch(BaseFilter):
