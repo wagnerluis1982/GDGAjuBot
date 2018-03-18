@@ -13,7 +13,7 @@ from telegram.ext.messagehandler import MessageHandler
 
 from . util import do_not_spam
 from . import util
-from .data.resources import Resources
+from gdgajubot.data.resources import Resources
 
 
 class FilterSearch(BaseFilter):
