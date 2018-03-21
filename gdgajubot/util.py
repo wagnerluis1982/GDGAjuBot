@@ -5,11 +5,12 @@ import logging
 import os
 import random
 import re
+import requests
 import threading
 from urllib import parse
-
-import requests
 import yaml
+
+import dj_database_url
 
 DEFAULT_DATABASE = {
     'provider': 'sqlite',
@@ -24,6 +25,7 @@ class BotConfig:
         telegram_token=None,
         meetup_key=None,
         facebook_key=None,
+        database_url=None,
         group_name=None,
         url_shortener_key=None,
         events_source=None,
@@ -40,6 +42,7 @@ class BotConfig:
         self.debug_mode = dev
         self.links = None
         self.custom_responses = None
+        self.database = self.parse_database_url(database_url) if database_url else None
         if config_file:
             self.load_config_file(config_file)
 
@@ -58,6 +61,8 @@ class BotConfig:
             self.database = contents['database']
         else:
             self.database = DEFAULT_DATABASE
+        if 'database_url' in contents:
+            self.database = self.parse_database_url(contents['database_url'])
 
     def open_file_or_url(self, file_or_url):
         if bool(parse.urlparse(file_or_url).netloc):
@@ -65,6 +70,34 @@ class BotConfig:
         else:
             with open(file_or_url, 'r') as config_file:
                 return config_file.read()
+
+    def parse_database_url(self, database_url):
+        def parse_postgres(database_dict):
+            database = dict(database_dict)
+            return {
+                'provider': 'postgres',
+                'database': database.get('NAME'),
+                'user': database.get('USER'),
+                'password': database.get('PASSWORD'),
+                'host': database.get('HOST'),
+                'port': database.get('PORT'),
+            }
+
+        def parse_sqlite(database_dict):
+            return {
+                'provider': 'sqlite',
+                'filename': database_dict['PATH'],
+            }
+
+        try:
+            dj_engine_to_pony_provider = {
+                'django.db.backends.postgresql_psycopg2': parse_postgres,
+                'django.db.backends.sqlite3': parse_sqlite,
+            }
+            parsed = dj_database_url.parse(database_url)
+            return dj_engine_to_pony_provider[parsed['ENGINE']](parsed)
+        except KeyError:
+            raise Exception('There was an error parsing the database_url configuration.')
 
 
 class HandlerHelper:
