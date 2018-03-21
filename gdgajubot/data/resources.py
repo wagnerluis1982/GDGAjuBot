@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 from gdgajubot import util
 from gdgajubot.data.database import db, orm, Message, User, Choice, ChoiceConverter
 
+
 class Resources:
     BOOK_URL = "https://www.packtpub.com/packt/offers/free-learning"
     HEADERS = {

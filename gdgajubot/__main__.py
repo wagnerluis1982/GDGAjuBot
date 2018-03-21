@@ -2,7 +2,7 @@ import argparse
 import logging
 
 from gdgajubot import util
-from gdgajubot.gdgajubot import GDGAjuBot
+from gdgajubot.bot import GDGAjuBot
 
 
 def main():

@@ -16,10 +16,10 @@ setup(
     license="GPLv2",
     entry_points={
         'console_scripts': [
-            'gdgajubot=gdgajubot',
+            'gdgajubot = gdgajubot.__main__:main',
         ],
     },
-    packages=["gdgajubot"],
+    packages=['gdgajubot', 'gdgajubot.data'],
     install_requires=requirements,
     classifiers=[
         "Programming Language :: Python :: 3.4",
