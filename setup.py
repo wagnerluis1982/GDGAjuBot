@@ -16,7 +16,7 @@ setup(
     license = "GPLv2",
     entry_points={
         'console_scripts': [
-            'gdgajubot=gdgajubot.gdgajubot:main',
+            'gdgajubot=gdgajubot',
         ],
     },
     packages = ["gdgajubot"],
