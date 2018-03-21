@@ -42,7 +42,10 @@ class BotConfig:
         self.debug_mode = dev
         self.links = None
         self.custom_responses = None
-        self.database = self.parse_database_url(database_url) if database_url else None
+        self.database = (
+            self.parse_database_url(database_url)
+            if database_url else DEFAULT_DATABASE
+        )
         if config_file:
             self.load_config_file(config_file)
 
@@ -59,8 +62,6 @@ class BotConfig:
             self.facebook_key = contents['tokens'].get('facebook', None)
         if 'database' in contents:
             self.database = contents['database']
-        else:
-            self.database = DEFAULT_DATABASE
         if 'database_url' in contents:
             self.database = self.parse_database_url(contents['database_url'])
 
