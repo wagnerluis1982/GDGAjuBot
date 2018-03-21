@@ -81,14 +81,12 @@ class BotConfig:
                 'password': database.get('PASSWORD'),
                 'host': database.get('HOST'),
                 'port': database.get('PORT'),
-                'create_db': True,
             }
 
         def parse_sqlite(database_dict):
             return {
                 'provider': 'sqlite',
                 'filename': database_dict['PATH'],
-                'create_db': True,
             }
 
         try:
