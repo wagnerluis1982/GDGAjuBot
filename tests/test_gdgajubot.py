@@ -4,8 +4,8 @@ import os
 from datetime import datetime
 from unittest import mock
 
-from gdgajubot import bot
-from gdgajubot import util
+from gdgajubot import bot, util
+from gdgajubot.bot import GDGAjuBot
 
 AJU_TZ = util.AJU_TZ
 
@@ -93,19 +93,19 @@ class TestGDGAjuBot(unittest.TestCase):
 
     def test_send_welcome(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
-        g_bot = bot.GDGAjuBot(self.config, bot, resources)
+        g_bot = GDGAjuBot(self.config, bot, resources)
         g_bot.send_welcome(message)
         self._assert_send_welcome(bot, message)
 
     def test_help(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
-        g_bot = bot.GDGAjuBot(self.config, bot, resources)
+        g_bot = GDGAjuBot(self.config, bot, resources)
         g_bot.help(message)
         self._assert_help_message(bot, message)
 
     def test_list_upcoming_events(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
-        g_bot = bot.GDGAjuBot(self.config, bot, resources)
+        g_bot = GDGAjuBot(self.config, bot, resources)
         g_bot.list_upcoming_events(message)
 
         # Verifica se o response criado está correto
@@ -118,7 +118,7 @@ class TestGDGAjuBot(unittest.TestCase):
 
     def test_packtpub_free_learning(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
-        g_bot = bot.GDGAjuBot(self.config, bot, resources)
+        g_bot = GDGAjuBot(self.config, bot, resources)
         ts = resources.book.expires
 
         # Sem warning
@@ -143,7 +143,7 @@ class TestGDGAjuBot(unittest.TestCase):
 
     def test_books_unavailable(self):
         bot, resources, message = MockTeleBot(), MockResources(book=False), MockMessage()
-        g_bot = bot.GDGAjuBot(self.config, bot, resources)
+        g_bot = GDGAjuBot(self.config, bot, resources)
 
         r = "Parece que não tem um livro grátis hoje 😡\n\n" \
             "Se acha que é um erro meu, veja com seus próprios olhos em https://www.packtpub.com/packt/offers/free-learning"
@@ -153,7 +153,7 @@ class TestGDGAjuBot(unittest.TestCase):
 
     def test_about(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage(id=0xB00B)
-        g_bot = bot.GDGAjuBot(self.config, bot, resources)
+        g_bot = GDGAjuBot(self.config, bot, resources)
         g_bot.about(message)
         self._assert_about(bot, message)
 
@@ -203,7 +203,7 @@ class TestGDGAjuBot(unittest.TestCase):
     def test_smart_reply(self):
         bot, resources = MockTeleBot(), MockResources()
         message = MockMessage(id=0x6D6)
-        g_bot = bot.GDGAjuBot(self.config, bot, resources)
+        g_bot = GDGAjuBot(self.config, bot, resources)
         text = "I <3 GDG Aracaju"
 
         # Mensagens privadas não fazem link
@@ -224,7 +224,7 @@ class TestGDGAjuBot(unittest.TestCase):
         bot.send_message.assert_called_with(message.chat.id, mock.ANY,
                                             reply_to_message_id=82)
         the_answer = bot.send_message.call_args[0][1]
-        assert the_answer[2:] in bot.GDGAjuBot.already_answered_texts
+        assert the_answer[2:] in GDGAjuBot.already_answered_texts
 
 
 class TestResources(unittest.TestCase):
