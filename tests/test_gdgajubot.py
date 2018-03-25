@@ -141,7 +141,7 @@ class TestGDGAjuBot(unittest.TestCase):
         g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 29, tz=AJU_TZ))
         self._assert_packtpub_free_learning(bot, message, warning="30 segundos")
 
-    def test_books_unavailable(self):
+    def test_book_unavailable(self):
         bot, resources, message = MockTeleBot(), MockResources(book=False), MockMessage()
         g_bot = GDGAjuBot(self.config, bot, resources)
 
@@ -150,6 +150,10 @@ class TestGDGAjuBot(unittest.TestCase):
 
         g_bot.packtpub_free_learning(message)
         bot.reply_to.assert_called_with(message, r, parse_mode="Markdown", disable_web_page_preview=True, send_picture=None)
+
+        resources.book = MockResources.book
+        g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(resources.book.expires + 1, tz=AJU_TZ))
+        bot.reply_to.assert_called_with(message, r, parse_mode="Markdown", disable_web_page_preview=True, send_picture='//test.jpg')
 
     def test_about(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage(id=0xB00B)
