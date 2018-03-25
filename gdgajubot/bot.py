@@ -1,169 +1,18 @@
 #!/usr/bin/env python3
 """Bot do GDG-Aracaju."""
-import argparse
 import datetime
 import functools
 import logging
 import random
 import re
 
-import requests
-import requests.exceptions
-from beaker.cache import CacheManager
-from beaker.util import parse_cache_config_options
-from bs4 import BeautifulSoup
 from telegram.ext import CommandHandler, Updater
 from telegram.ext.filters import BaseFilter, Filters
 from telegram.ext.messagehandler import MessageHandler
 
-from . util import do_not_spam
-from . import util
-
-
-class Resources:
-    BOOK_URL = "https://www.packtpub.com/packt/offers/free-learning"
-    HEADERS = {
-        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) "
-                      "AppleWebKit/537.36 (KHTML, like Gecko) "
-                      "Chrome/51.0.2704.79 Safari/537.36"
-    }
-
-    # Configuring cache
-    cache = CacheManager(
-        **parse_cache_config_options({'cache.type': 'memory'}))
-
-    def __init__(self, config):
-        self.config = config
-
-        # create delegate method based on choice
-        if 'meetup' in config.events_source:
-            self.generate_events = self.meetup_events
-        else:
-            self.generate_events = self.facebook_events
-
-    @cache.cache('get_events', expire=60)
-    def get_events(self, list_size=5):
-        return list(self.generate_events(list_size))
-
-    def meetup_events(self, n):
-        """Obtém eventos do Meetup."""
-        # api v3 base url
-        all_events = []
-        for group in self.config.group_name:
-            url = "https://api.meetup.com/{group}/events".format(
-                group=group
-            )
-
-            # response for the events
-            r = requests.get(url, params={
-                'key': self.config.meetup_key,
-                'status': 'upcoming',
-                'only': 'name,time,link',  # filter response to these fields
-                'page': n,                 # limit to n events
-            })
-
-            # API output
-            events = r.json()
-
-            for event in events:
-                # convert time returned by Meetup API
-                event['time'] = datetime.datetime.fromtimestamp(
-                    event['time'] / 1000, tz=util.AJU_TZ)
-                # shorten url!
-                event['link'] = self.get_short_url(event['link'])
-
-            all_events.extend(events)
-        return sorted(all_events, key=lambda x: x['time'])
-
-    def facebook_events(self, n):
-        """Obtém eventos do Facebook."""
-        all_events = []
-        for group in self.config.group_name:
-            # api v2.8 base url
-            url = "https://graph.facebook.com/v2.8/%s/events" % group
-
-            # response for the events
-            r = requests.get(url, params={
-                'access_token': self.config.facebook_key,
-                'since': 'today',
-                'fields': 'name,start_time',  # filter response to these fields
-                'limit': n,                   # limit to n events
-            })
-
-            # API output
-            events = r.json().get('data', [])
-
-            for event in events:
-                # convert time returned by Facebook API
-                event['time'] = datetime.datetime.strptime(
-                    event.pop('start_time'), "%Y-%m-%dT%H:%M:%S%z")
-                # create event link
-                link = "https://www.facebook.com/events/%s" % event.pop('id')
-                # shorten url!
-                event['link'] = self.get_short_url(link)
-            all_events.extend(events)
-
-        return sorted(all_events, key=lambda x: x['time'])
-
-    @cache.cache('get_packt_free_book', expire=600)
-    def get_packt_free_book(self):
-        r = requests.get(self.BOOK_URL, headers=self.HEADERS)
-        return self.extract_packt_free_book(r.content, r.encoding)
-
-    @staticmethod
-    def extract_packt_free_book(content, encoding='utf-8'):
-        if hasattr(content, 'read'):    # file-type
-            content = content.read()
-        if isinstance(content, bytes):  # convert to str
-            content = content.decode(encoding)
-
-        # Extracting information with html parser
-        page = BeautifulSoup(content, 'html.parser')
-        dealoftheday = page.select_one(
-            '#deal-of-the-day div div div:nth-of-type(2)')
-
-        if not dealoftheday:
-            return None
-
-        book = util.AttributeDict()
-        try:
-            book['name'] = dealoftheday.select_one(
-                'div:nth-of-type(2) h2').text.strip()
-            book['summary'] = dealoftheday.select_one(
-                'div:nth-of-type(3)').text.strip()
-            book['expires'] = int(dealoftheday.select_one(
-                'span.packt-js-countdown').attrs['data-countdown-to']
-            )
-            image_source = page.select_one(
-                '#deal-of-the-day > div > div > '
-                'div.dotd-main-book-image.float-left > a > img'
-            ).attrs.get('data-original', None)
-            if image_source and image_source.startswith('//'):
-                image_source = 'https:{0}'.format(image_source)
-            book['cover'] = image_source
-            return book
-        except:
-            return None
-
-    @cache.cache('get_short_url')
-    def get_short_url(self, long_url):
-        # Faz a requisição da URL curta somente se houver uma key configurada
-        if self.config.url_shortener_key:
-            r = requests.post(
-                "https://www.googleapis.com/urlshortener/v1/url",
-                params={
-                    'key': self.config.url_shortener_key,
-                    'fields': 'id'
-                },
-                json={'longUrl': long_url}
-            )
-            if r.status_code == 200:
-                return r.json()['id']
-            else:
-                logging.exception(r.text)
-
-        # Caso tenha havido algum problema usa a própria URL longa
-        return long_url
+from gdgajubot.data.resources import Resources
+from gdgajubot.util import do_not_spam
+from gdgajubot import util
 
 
 class FilterSearch(BaseFilter):
@@ -239,6 +88,14 @@ class GDGAjuBot:
         for search, action in easter_eggs:
             dispatcher.add_handler(
                 MessageHandler(FilterSearch(search), adapt_callback(action)))
+
+        dispatcher.add_handler(
+            MessageHandler(
+                filters=None,
+                callback=adapt_callback(self.extract_and_save_data),
+            ),
+            group=1,
+        )
 
     def custom_response_template(
         self, message, *args, command='', response_text=''
@@ -322,6 +179,9 @@ class GDGAjuBot:
 
             response.append("[%(name)s](%(link)s): %(time)s" % event)
         return '\n'.join(response)
+
+    def extract_and_save_data(self, message, *args, **kwargs):
+        self.resources.log_message(message, *args, **kwargs)
 
     @commands('/book')
     def packtpub_free_learning(self, message, now=None):
@@ -422,6 +282,13 @@ class GDGAjuBot:
         response += "Para saber mais ou contribuir: https://github.com/GDGAracaju/GDGAjuBot/"
         self.bot.send_message(message.chat.id, response)
 
+    @commands('/list_users')
+    def list_users(self, message):
+        if self.resources.is_user_admin(message.from_user.id):
+            users = self.resources.list_all_users()
+            response = '\n'.join([str(user) for user in users])
+            self.bot.send_message(message.chat.id, response)
+
     @do_not_spam
     def love_ruby(self, message):
         """Easter Egg com o Ruby."""
@@ -455,62 +322,3 @@ class GDGAjuBot:
                 "Usando telegram_token={0}".format(self.config.telegram_token))
             logging.info(
                 "Usando meetup_key={0}".format(self.config.meetup_key))
-
-
-def main():
-    # Configuring log
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p'
-    )
-
-    # Configuring bot parameters
-    logging.info("Configurando parâmetros")
-    parser = util.ArgumentParser(description='Bot do GDG Aracaju')
-    parser.add_argument(
-        '-c', '--config_file',
-        help='Arquivo de configuração')
-    parser.add_argument(
-        '-t', '--telegram_token',
-        help='Token da API do Telegram')
-    parser.add_argument(
-        '-m', '--meetup_key',
-        help='Key da API do Meetup')
-    parser.add_argument(
-        '-f', '--facebook_key',
-        help='Key da API do Facebook')
-    parser.add_argument(
-        '-g', '--group_name',
-        help='Grupo(s) do Meetup/Facebook, separados por vírgulas',
-        required=True)
-    parser.add_argument(
-        '--url_shortener_key',
-        help='Key da API do URL Shortener')
-    parser.add_argument(
-        '--events_source', choices=['meetup', 'facebook'])
-    parser.add_argument(
-        '-d', '--dev',
-        help='Indicador de Debug/Dev mode', action='store_true')
-    parser.add_argument(
-        '--no-dev',
-        help=argparse.SUPPRESS, dest='dev', action='store_false')
-
-    # Parse command line args and get the config
-    _config = parser.parse_args()
-
-    # Define the events source if needed
-    if not _config.events_source:
-        if _config.meetup_key:
-            _config.events_source = 'meetup'
-        elif _config.facebook_key:
-            _config.events_source = 'facebook'
-        else:
-            parser.error('an API key is needed to get events')
-
-    # Starting bot
-    gdgbot = GDGAjuBot(_config)
-    gdgbot.start()
-
-
-if __name__ == "__main__":
-    main()

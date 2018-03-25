@@ -7,21 +7,21 @@ with open('requirements.txt') as requirements_file:
     requirements = requirements_file.read().splitlines()
 
 setup(
-    name = "gdgajubot",
-    version = "1.4",
-    author = "GDG Aracaju",
-    url = "http://site.gdgaracaju.com.br/",
-    description = "GDG Aracaju Bot",
-    long_description = codecs.open("README.md", 'r', encoding='utf-8').read(),
-    license = "GPLv2",
+    name="gdgajubot",
+    version="1.4",
+    author="GDG Aracaju",
+    url="http://site.gdgaracaju.com.br/",
+    description="GDG Aracaju Bot",
+    long_description=codecs.open("README.md", 'r', encoding='utf-8').read(),
+    license="GPLv2",
     entry_points={
         'console_scripts': [
-            'gdgajubot=gdgajubot.gdgajubot:main',
+            'gdgajubot = gdgajubot.__main__:main',
         ],
     },
-    packages = ["gdgajubot"],
-    install_requires = requirements,
-    classifiers = [
+    packages=['gdgajubot', 'gdgajubot.data'],
+    install_requires=requirements,
+    classifiers=[
         "Programming Language :: Python :: 3.4",
         "Development Status :: 4 - Beta",
         "Environment :: Console",

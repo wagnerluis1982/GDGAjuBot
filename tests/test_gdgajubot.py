@@ -4,8 +4,8 @@ import os
 from datetime import datetime
 from unittest import mock
 
-from gdgajubot import gdgajubot
-from gdgajubot import util
+from gdgajubot import bot, util
+from gdgajubot.bot import GDGAjuBot
 
 AJU_TZ = util.AJU_TZ
 
@@ -72,40 +72,40 @@ class TestGDGAjuBot(unittest.TestCase):
     # Regular expressions tests
 
     def test_find_ruby(self):
-        assert gdgajubot.find_ruby("Olá ruby GDG")
-        assert gdgajubot.find_ruby("Olá RUBY GDG")
-        assert gdgajubot.find_ruby("Olá Ruby GDG")
-        assert not gdgajubot.find_ruby("OlárubyGDG")
+        assert bot.find_ruby("Olá ruby GDG")
+        assert bot.find_ruby("Olá RUBY GDG")
+        assert bot.find_ruby("Olá Ruby GDG")
+        assert not bot.find_ruby("OlárubyGDG")
 
     def test_find_java(self):
-        assert gdgajubot.find_java("Olá java GDG")
-        assert gdgajubot.find_java("Olá Java GDG")
-        assert gdgajubot.find_java("Olá JAVA GDG")
-        assert not gdgajubot.find_java("OlájavaGDG")
+        assert bot.find_java("Olá java GDG")
+        assert bot.find_java("Olá Java GDG")
+        assert bot.find_java("Olá JAVA GDG")
+        assert not bot.find_java("OlájavaGDG")
 
     def test_find_python(self):
-        assert gdgajubot.find_python("Olá python GDG")
-        assert gdgajubot.find_python("Olá Python GDG")
-        assert gdgajubot.find_python("Olá PYTHON GDG")
-        assert not gdgajubot.find_python("OlápythonGDG")
+        assert bot.find_python("Olá python GDG")
+        assert bot.find_python("Olá Python GDG")
+        assert bot.find_python("Olá PYTHON GDG")
+        assert not bot.find_python("OlápythonGDG")
 
     # Bot commands tests
 
     def test_send_welcome(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
-        g_bot = gdgajubot.GDGAjuBot(self.config, bot, resources)
+        g_bot = GDGAjuBot(self.config, bot, resources)
         g_bot.send_welcome(message)
         self._assert_send_welcome(bot, message)
 
     def test_help(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
-        g_bot = gdgajubot.GDGAjuBot(self.config, bot, resources)
+        g_bot = GDGAjuBot(self.config, bot, resources)
         g_bot.help(message)
         self._assert_help_message(bot, message)
 
     def test_list_upcoming_events(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
-        g_bot = gdgajubot.GDGAjuBot(self.config, bot, resources)
+        g_bot = GDGAjuBot(self.config, bot, resources)
         g_bot.list_upcoming_events(message)
 
         # Verifica se o response criado está correto
@@ -118,7 +118,7 @@ class TestGDGAjuBot(unittest.TestCase):
 
     def test_packtpub_free_learning(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
-        g_bot = gdgajubot.GDGAjuBot(self.config, bot, resources)
+        g_bot = GDGAjuBot(self.config, bot, resources)
         ts = resources.book.expires
 
         # Sem warning
@@ -143,7 +143,7 @@ class TestGDGAjuBot(unittest.TestCase):
 
     def test_books_unavailable(self):
         bot, resources, message = MockTeleBot(), MockResources(book=False), MockMessage()
-        g_bot = gdgajubot.GDGAjuBot(self.config, bot, resources)
+        g_bot = GDGAjuBot(self.config, bot, resources)
 
         r = "Parece que não tem um livro grátis hoje 😡\n\n" \
             "Se acha que é um erro meu, veja com seus próprios olhos em https://www.packtpub.com/packt/offers/free-learning"
@@ -153,7 +153,7 @@ class TestGDGAjuBot(unittest.TestCase):
 
     def test_about(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage(id=0xB00B)
-        g_bot = gdgajubot.GDGAjuBot(self.config, bot, resources)
+        g_bot = GDGAjuBot(self.config, bot, resources)
         g_bot.about(message)
         self._assert_about(bot, message)
 
@@ -203,7 +203,7 @@ class TestGDGAjuBot(unittest.TestCase):
     def test_smart_reply(self):
         bot, resources = MockTeleBot(), MockResources()
         message = MockMessage(id=0x6D6)
-        g_bot = gdgajubot.GDGAjuBot(self.config, bot, resources)
+        g_bot = GDGAjuBot(self.config, bot, resources)
         text = "I <3 GDG Aracaju"
 
         # Mensagens privadas não fazem link
@@ -224,7 +224,7 @@ class TestGDGAjuBot(unittest.TestCase):
         bot.send_message.assert_called_with(message.chat.id, mock.ANY,
                                             reply_to_message_id=82)
         the_answer = bot.send_message.call_args[0][1]
-        assert the_answer[2:] in gdgajubot.GDGAjuBot.already_answered_texts
+        assert the_answer[2:] in GDGAjuBot.already_answered_texts
 
 
 class TestResources(unittest.TestCase):
@@ -237,4 +237,4 @@ class TestResources(unittest.TestCase):
                   'cover': "https://d1ldz4te4covpm.cloudfront.net/sites/default/files/imagecache/dotd_main_image/7409EN.jpg",
                   'expires': 1459378800}
 
-        assert gdgajubot.Resources.extract_packt_free_book(content) == result
+        assert bot.Resources.extract_packt_free_book(content) == result
