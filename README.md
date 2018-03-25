@@ -38,7 +38,7 @@ chamando pela linha de comando:
 
 ### Dependências
 
-O `gdgajubot` precisa no mínimo do Python 3.4.
+O `gdgajubot` precisa no mínimo do Python 3.6.
 
 No momento da instalação, as dependências mínimas listadas no arquivo `setup.py` serão baixadas
 automaticamente. Para desenvolver o `gdgajubot`, recomendamos a instalação das dependências listadas
