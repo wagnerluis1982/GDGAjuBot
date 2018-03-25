@@ -22,7 +22,7 @@ setup(
     packages=['gdgajubot', 'gdgajubot.data'],
     install_requires=requirements,
     classifiers=[
-        "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.6",
         "Development Status :: 4 - Beta",
         "Environment :: Console",
         "Intended Audience :: Developers",
