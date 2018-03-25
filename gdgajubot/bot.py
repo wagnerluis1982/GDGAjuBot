@@ -28,8 +28,10 @@ find_ruby = re.compile(r"(?i)\bRUBY\b").search
 find_java = re.compile(r"(?i)\bJAVA\b").search
 find_python = re.compile(r"(?i)\bPYTHON\b").search
 
-# Helper para definir os comandos do bot
+# Helpers para definir os handlers do bot
 commands = util.HandlerHelper()
+easter_egg = util.HandlerHelper()
+on_message = util.HandlerHelper()
 
 
 # Adapta a assinatura de função esperada por `add_handler` na API nova
@@ -63,11 +65,12 @@ class GDGAjuBot:
 
         # Configura os comandos aceitos pelo bot
         dispatcher = self.updater.dispatcher
-        for k, function in commands.functions.items():
+        for k, function in commands.functions:
             name = k[1:] if k[0] == '/' else k
             dispatcher.add_handler(
                 CommandHandler(name, adapt_callback(function, self)))
 
+        # Configura os comandos personalizados
         if self.config.custom_responses:
             for command, response in self.config.custom_responses.items():
                 name = command.replace('/', '')
@@ -80,22 +83,28 @@ class GDGAjuBot:
                 )
 
         # Configura as easter eggs
-        easter_eggs = (
-            (find_ruby, self.love_ruby),
-            (find_java, self.memory_java),
-            (find_python, self.easter_python),
-        )
-        for search, action in easter_eggs:
+        for search, function in easter_egg.functions:
             dispatcher.add_handler(
-                MessageHandler(FilterSearch(search), adapt_callback(action)))
+                MessageHandler(FilterSearch(search), adapt_callback(do_not_spam(function), self)))
 
-        dispatcher.add_handler(
-            MessageHandler(
-                filters=None,
-                callback=adapt_callback(self.extract_and_save_data),
-            ),
-            group=1,
-        )
+        # Configura as funções que reagem a todas as mensagens de texto
+        if on_message.functions:
+            def adapt_search(xs):
+                pattern, function = xs
+                return re.compile(pattern).search, function
+
+            def sub_dispatcher(_, update, *, actions=list(map(adapt_search, on_message.functions))):
+                for search, function in actions:
+                    if search(update.message.text):
+                        function(self, update.message)
+
+            dispatcher.add_handler(
+                MessageHandler(
+                    filters=Filters.text,
+                    callback=sub_dispatcher,
+                ),
+                group=1,
+            )
 
     def custom_response_template(
         self, message, *args, command='', response_text=''
@@ -180,6 +189,7 @@ class GDGAjuBot:
             response.append("[%(name)s](%(link)s): %(time)s" % event)
         return '\n'.join(response)
 
+    @on_message('.*')
     def extract_and_save_data(self, message, *args, **kwargs):
         self.resources.log_message(message, *args, **kwargs)
 
@@ -289,7 +299,7 @@ class GDGAjuBot:
             response = '\n'.join([str(user) for user in users])
             self.bot.send_message(message.chat.id, response)
 
-    @do_not_spam
+    @easter_egg(find_ruby)
     def love_ruby(self, message):
         """Easter Egg com o Ruby."""
         logging.info("%s: %s", message.from_user.username, "ruby")
@@ -299,13 +309,13 @@ class GDGAjuBot:
             "@{} ama Ruby... ou Rails?".format(username),
         )
 
-    @do_not_spam
+    @easter_egg(find_java)
     def memory_java(self, message):
         """Easter Egg com o Java."""
         logging.info("%s: %s", message.from_user.username, "java")
         self.bot.send_message(message.chat.id, "Ihh... acabou a RAM")
 
-    @do_not_spam
+    @easter_egg(find_python)
     def easter_python(self, message):
         """Easter Egg com o Python."""
         logging.info("%s: %s", message.from_user.username, "python")
