@@ -103,34 +103,32 @@ class BotConfig:
 
 class HandlerHelper:
     def __init__(self):
-        self.functions = {}
+        self.functions = []
 
     def __call__(self, *names):
-        """Decorator para marcar funções como comandos do bot"""
+        """Decorator para anotar funções para usar como handlers do bot"""
         def decorator(func):
             @functools.wraps(func)
             def wrapped(*args, **kwargs):
                 return func(*args, **kwargs)
-            for name in names:
-                self.functions[name] = func
+
+            if self.functions:
+                message = "Cannot mix commands and non-command annotations"
+                last = self.functions[-1]
+                if names:
+                    assert isinstance(last, tuple), message
+                else:
+                    assert callable(last), message
+
+            if names:
+                for name in names:
+                    self.functions += [(name, func)]
+            else:
+                self.functions += [func]
+
             return wrapped
+
         return decorator
-
-    def handle(self, name, raises=False, *args, **kwargs):
-        """Executa a função associada ao comando passado
-
-        :except: Exceções são relançadas se `raises` é `True`,
-                 do contrário, são enviadas ao log.
-        :return: `True` ou `False` indicando que o comando foi executado
-        """
-        function = self.functions.get(name)
-        if function:
-            try:
-                function(*args, **kwargs)
-            except Exception as e:
-                raise e if raises else logging.exception(e)
-            return True
-        return False
 
 
 def match_command(text):
