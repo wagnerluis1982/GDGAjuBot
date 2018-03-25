@@ -1,0 +1,20 @@
+[[source]]
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+beaker = ">=1.9.0,<1.10.0"
+beautifulsoup4 = ">=4.6.0,<4.7.0"
+dj-database-url = "==0.5.0"
+pony = ">=0.7.3,<0.8.0"
+psycopg2 = ">=2.7.4,<2.8.0"
+python-telegram-bot = ">=10.0.1,<10.1.0"
+pyyaml = "==3.12"
+requests = ">=2.18.4,<2.19.0"
+
+[dev-packages]
+pytest = "*"
+
+[requires]
+python_version = "3.6"
