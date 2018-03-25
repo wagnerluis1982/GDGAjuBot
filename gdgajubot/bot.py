@@ -41,6 +41,19 @@ def adapt_callback(cb, *args, **kwargs):
     return lambda _, u, *args, **kwargs: cb(u.message, *args, **kwargs)
 
 
+ALREADY_ANSWERED_TEXTS = (
+    "Ei, olhe, acabei de responder!",
+    "Me reservo ao direito de não responder!",
+    "Deixe de insistência!",
+)
+
+TIME_LEFT = ((30, '30 segundos'),
+             (60, '1 minuto'),
+             (600, '10 minutos'),
+             (1800, 'meia hora'),
+             (3600, '1 hora'))
+
+
 class GDGAjuBot:
     def __init__(self, config, bot=None, resources=None):
         self.config = config
@@ -216,12 +229,6 @@ class GDGAjuBot:
             send_picture=book['cover'] if book else None
         )
 
-    timeleft = ((30, '30 segundos'),
-                (60, '1 minuto'),
-                (600, '10 minutos'),
-                (1800, 'meia hora'),
-                (3600, '1 hora'))
-
     def _create_book_response(self, book, now=None):
         if book is None:
             return
@@ -241,17 +248,11 @@ class GDGAjuBot:
             "🔎 %s\n"
         ) % (book.name, Resources.BOOK_URL, book.summary)
 
-        for num, in_words in self.timeleft:
+        for num, in_words in TIME_LEFT:
             if seconds <= num:
                 warning = "⌛️ Menos de %s!" % in_words
                 return response + warning
         return response
-
-    already_answered_texts = (
-        "Ei, olhe, acabei de responder!",
-        "Me reservo ao direito de não responder!",
-        "Deixe de insistência!",
-    )
 
     def _send_smart_reply(self, message, text, **kwargs):
         def send_message():
@@ -272,7 +273,7 @@ class GDGAjuBot:
             # to send a contextual response
             if previous.get('text') == text:
                 self.bot.send_message(
-                    message.chat.id, '👆 ' + random.choice(self.already_answered_texts),
+                    message.chat.id, '👆 ' + random.choice(ALREADY_ANSWERED_TEXTS),
                     reply_to_message_id=previous['message_id']
                 )
             # or, send new response and update the cache
