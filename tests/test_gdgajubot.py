@@ -5,7 +5,7 @@ from datetime import datetime
 from unittest import mock
 
 from gdgajubot import bot, util
-from gdgajubot.bot import GDGAjuBot
+from gdgajubot.bot import GDGAjuBot, ALREADY_ANSWERED_TEXTS
 
 AJU_TZ = util.AJU_TZ
 
@@ -64,6 +64,9 @@ class MockResources:
 
     def get_short_url(self, long_url):
         return long_url
+
+    def last_book_sent(self, chat_id, update):
+        pass
 
 
 class TestGDGAjuBot(unittest.TestCase):
@@ -141,7 +144,7 @@ class TestGDGAjuBot(unittest.TestCase):
         g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 29, tz=AJU_TZ))
         self._assert_packtpub_free_learning(bot, message, warning="30 segundos")
 
-    def test_books_unavailable(self):
+    def test_book_unavailable(self):
         bot, resources, message = MockTeleBot(), MockResources(book=False), MockMessage()
         g_bot = GDGAjuBot(self.config, bot, resources)
 
@@ -149,7 +152,13 @@ class TestGDGAjuBot(unittest.TestCase):
             "Se acha que é um erro meu, veja com seus próprios olhos em https://www.packtpub.com/packt/offers/free-learning"
 
         g_bot.packtpub_free_learning(message)
-        bot.reply_to.assert_called_with(message, r, parse_mode="Markdown", disable_web_page_preview=True, send_picture=None)
+        bot.send_message.assert_called_with(message.chat_id, r, parse_mode="Markdown",
+                                            disable_web_page_preview=True, reply_to_message_id=message.message_id)
+
+        resources.book = MockResources.book
+        g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(resources.book.expires + 1, tz=AJU_TZ))
+        bot.send_message.assert_called_with(message.chat_id, r, parse_mode="Markdown",
+                                            disable_web_page_preview=True, reply_to_message_id=message.message_id)
 
     def test_about(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage(id=0xB00B)
@@ -178,7 +187,8 @@ class TestGDGAjuBot(unittest.TestCase):
              "[Coding Dojo](http://www.meetup.com/GDG-Aracaju/events/mwnsrlyvgbjb/): 06/04 19h\n"
              "[O Caminho para uma Arquitetura Elegante #Hangout](http://www.meetup.com/GDG-Aracaju/events/229591464/): 08/04 21h\n"
              "[Android Jam 2: #Curso Dia 2](http://www.meetup.com/GDG-Aracaju/events/229770309/): 09/04 13h")
-        bot.reply_to.assert_called_with(message, r, parse_mode="Markdown", disable_web_page_preview=True)
+        bot.send_message.assert_called_with(message.chat_id, r, parse_mode="Markdown",
+                                            disable_web_page_preview=True, reply_to_message_id=message.message_id)
 
     def _assert_packtpub_free_learning(self, bot, message, warning=''):
         self._assert_mockbot(bot)
@@ -187,7 +197,8 @@ class TestGDGAjuBot(unittest.TestCase):
         r = ("Confira o livro gratuito de hoje da Packt Publishing 🎁\n\n"
              "📖 [Android 2099](https://www.packtpub.com/packt/offers/free-learning)\n"
              "🔎 Good practices with Miguel O’Hara\n") + warning
-        bot.reply_to.assert_called_with(message, r, parse_mode="Markdown", disable_web_page_preview=True, send_picture='//test.jpg')
+        bot.send_message.assert_called_with(message.chat_id, r, parse_mode="Markdown",
+                                            disable_web_page_preview=True, reply_to_message_id=message.message_id)
 
     def _assert_about(self, bot, message):
         self._assert_mockbot(bot)
@@ -209,22 +220,22 @@ class TestGDGAjuBot(unittest.TestCase):
         # Mensagens privadas não fazem link
         message.chat.type = "private"
         g_bot._send_smart_reply(message, text)
-        bot.reply_to.assert_called_with(message, text)
+        bot.send_message.assert_called_with(message.chat_id, text, reply_to_message_id=message.message_id)
         g_bot._send_smart_reply(message, text)
-        bot.reply_to.assert_called_with(message, text)
+        bot.send_message.assert_called_with(message.chat_id, text, reply_to_message_id=message.message_id)
 
-        # Configurando MockTeleBot.reply_to() para retornar um MockMessage com um message_id
-        bot.reply_to.return_value = MockMessage(message_id=82)
+        # Configurando MockTeleBot.send_message() para retornar um MockMessage com um message_id
+        bot.send_message.return_value = MockMessage(message_id=82)
 
         # Mensagens de grupo fazem link
         message.chat.type = "group"
         g_bot._send_smart_reply(message, text)
-        bot.reply_to.assert_called_with(message, text)
+        bot.send_message.assert_called_with(message.chat_id, text, reply_to_message_id=message.message_id)
         g_bot._send_smart_reply(message, text)
         bot.send_message.assert_called_with(message.chat.id, mock.ANY,
                                             reply_to_message_id=82)
         the_answer = bot.send_message.call_args[0][1]
-        assert the_answer[2:] in GDGAjuBot.already_answered_texts
+        assert the_answer[2:] in ALREADY_ANSWERED_TEXTS
 
 
 class TestResources(unittest.TestCase):

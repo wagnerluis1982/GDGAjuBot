@@ -5,6 +5,7 @@ import functools
 import logging
 import random
 import re
+from collections import OrderedDict
 
 from telegram.ext import CommandHandler, Updater
 from telegram.ext.filters import BaseFilter, Filters
@@ -33,12 +34,30 @@ commands = util.HandlerHelper()
 easter_egg = util.HandlerHelper()
 on_message = util.HandlerHelper()
 
+# Alias para reutilizar o cache como decorator
+cache = Resources.cache
+
 
 # Adapta a assinatura de função esperada por `add_handler` na API nova
 def adapt_callback(cb, *args, **kwargs):
     if args:
         cb = functools.partial(cb, *args, **kwargs)
     return lambda _, u, *args, **kwargs: cb(u.message, *args, **kwargs)
+
+
+ALREADY_ANSWERED_TEXTS = (
+    "Ei, olhe, acabei de responder!",
+    "Me reservo ao direito de não responder!",
+    "Deixe de insistência!",
+)
+
+TIME_LEFT = OrderedDict([
+    (30, '30 segundos'),
+    (60, '1 minuto'),
+    (600, '10 minutos'),
+    (1800, 'meia hora'),
+    (3600, '1 hora'),
+])
 
 
 class GDGAjuBot:
@@ -193,72 +212,101 @@ class GDGAjuBot:
     def extract_and_save_data(self, message, *args, **kwargs):
         self.resources.log_message(message, *args, **kwargs)
 
+    @on_message('.*')
+    def ensure_daily_book(self, message):
+
+        # this function is cached for performance purposes
+        @cache.cache('ensure_daily_book', expire=600)
+        def ensure(self, chat_id):
+            # The book of the day ends at midnight in utc timezone, so we consider to send only if time is at least 22:00
+            now = datetime.datetime.now(tz=util.UTC_TZ)
+            if now.hour < 22:
+                return
+
+            # We send only if /book was called at least 3 hours ago
+            last = self.resources.last_book_sent(chat_id)
+            if not last or now.day > last.day and now.hour - last.hour > 3:
+                book, response, left = self.__get_book()
+                if left is not None:
+                    warning = "⌛️ Menos de %s!" % TIME_LEFT[left]
+                    response += warning
+
+                cover = book['cover'] if book else None
+
+                self.send_text_photo(message, response, cover, parse_mode="Markdown", disable_web_page_preview=True)
+
+        ensure(message.chat_id)
+
     @commands('/book')
     def packtpub_free_learning(self, message, now=None):
         """Retorna o livro disponível no free-learning da editora PacktPub."""
         logging.info("%s: %s", message.from_user.username, "/book")
-        # Faz duas tentativas para obter o livro do dia,
-        # por questões de possível cache antigo.
-        for _ in range(2):
-            book = self.resources.get_packt_free_book()
-            response = self._create_book_response(book, now)
-            if response:
-                break
-            Resources.cache.invalidate(
-                Resources.get_packt_free_book, "get_packt_free_book")
-        # As tentativas falharam...
-        else:
-            response = "Parece que não tem um livro grátis hoje 😡\n\n" \
-                       "Se acha que é um erro meu, veja com seus próprios olhos em " + Resources.BOOK_URL
-        self._send_smart_reply(
+
+        book, response, left = self.__get_book(now)
+        if left is not None:
+            warning = "⌛️ Menos de %s!" % TIME_LEFT[left]
+            response += warning
+
+        cover = book['cover'] if book else None
+
+        has_sent = self._send_smart_reply(
             message, response,
             parse_mode="Markdown", disable_web_page_preview=True,
-            send_picture=book['cover'] if book else None
+            picture=cover
         )
 
-    timeleft = ((30, '30 segundos'),
-                (60, '1 minuto'),
-                (600, '10 minutos'),
-                (1800, 'meia hora'),
-                (3600, '1 hora'))
+        if has_sent:
+            self.resources.last_book_sent(message.chat_id, update=True)
 
-    def _create_book_response(self, book, now=None):
-        if book is None:
-            return
+    def __get_book(self, now=None):
+        # Faz duas tentativas para obter o livro do dia, por questões de possível cache antigo.
+        for _ in range(2):
+            book = self.resources.get_packt_free_book()
+            if book is None:
+                continue
 
-        if now is None:
-            now = datetime.datetime.now(tz=util.AJU_TZ)
+            if now is None:
+                now = datetime.datetime.now(tz=util.AJU_TZ)
 
-        delta = datetime.datetime.fromtimestamp(
-            book.expires, tz=util.AJU_TZ) - now
-        seconds = delta.total_seconds()
-        if seconds < 0:
-            return
+            delta = datetime.datetime.fromtimestamp(book.expires, tz=util.AJU_TZ) - now
+            delta = delta.total_seconds()
+            if delta < 0:
+                continue
 
-        response = (
-            "Confira o livro gratuito de hoje da Packt Publishing 🎁\n\n"
-            "📖 [%s](%s)\n"
-            "🔎 %s\n"
-        ) % (book.name, Resources.BOOK_URL, book.summary)
+            response = (
+                "Confira o livro gratuito de hoje da Packt Publishing 🎁\n\n"
+                "📖 [%s](%s)\n"
+                "🔎 %s\n"
+            ) % (book.name, Resources.BOOK_URL, book.summary)
 
-        for num, in_words in self.timeleft:
-            if seconds <= num:
-                warning = "⌛️ Menos de %s!" % in_words
-                return response + warning
-        return response
+            for left in TIME_LEFT:
+                if delta <= left:
+                    return book, response, left
+            else:
+                left = None
 
-    already_answered_texts = (
-        "Ei, olhe, acabei de responder!",
-        "Me reservo ao direito de não responder!",
-        "Deixe de insistência!",
-    )
+            break
 
-    def _send_smart_reply(self, message, text, **kwargs):
-        def send_message():
-            picture = kwargs.get('send_picture')
-            if picture:
-                self.bot.send_photo(chat_id=message.chat_id, photo=picture)
-            return self.bot.reply_to(message, text, **kwargs)
+        # As tentativas falharam...
+        else:
+            Resources.cache.invalidate(Resources.get_packt_free_book, "get_packt_free_book")
+            book = None
+            response = "Parece que não tem um livro grátis hoje 😡\n\n" \
+                       "Se acha que é um erro meu, veja com seus próprios olhos em " + Resources.BOOK_URL
+            left = None
+
+        return book, response, left
+
+    def send_text_photo(self, message, text, picture=None, reply_to=False, **kwargs):
+        if picture:
+            self.bot.send_photo(chat_id=message.chat_id, photo=picture)
+        if reply_to:
+            kwargs['reply_to_message_id'] = message.message_id
+        return self.bot.send_message(message.chat_id, text, **kwargs)
+
+    def _send_smart_reply(self, message, text, picture=None, **kwargs):
+        send_message = functools.partial(self.send_text_photo, message, text, picture,
+                                         reply_to=True, **kwargs)
 
         # On groups or supergroups, check if I have
         # a recent previous response to refer
@@ -272,9 +320,11 @@ class GDGAjuBot:
             # to send a contextual response
             if previous.get('text') == text:
                 self.bot.send_message(
-                    message.chat.id, '👆 ' + random.choice(self.already_answered_texts),
+                    message.chat.id, '👆 ' + random.choice(ALREADY_ANSWERED_TEXTS),
                     reply_to_message_id=previous['message_id']
                 )
+                return False
+
             # or, send new response and update the cache
             else:
                 sent = send_message()
@@ -284,6 +334,8 @@ class GDGAjuBot:
         # On private chats or channels, send the normal reply...
         else:
             send_message()
+
+        return True
 
     @commands('/about')
     def about(self, message):

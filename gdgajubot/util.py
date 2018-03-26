@@ -186,6 +186,7 @@ class TimeZone:
 
 # aliases úteis
 AJU_TZ = TimeZone.gmt(-3)
+UTC_TZ = TimeZone.gmt(0)
 
 
 class Atomic:
