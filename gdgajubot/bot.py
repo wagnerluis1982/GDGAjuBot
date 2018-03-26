@@ -224,7 +224,7 @@ class GDGAjuBot:
         self._send_smart_reply(
             message, response,
             parse_mode="Markdown", disable_web_page_preview=True,
-            send_picture=cover
+            picture=cover
         )
 
     def __get_book(self, now=None):
@@ -266,12 +266,16 @@ class GDGAjuBot:
 
         return book, response, left
 
-    def _send_smart_reply(self, message, text, **kwargs):
-        def send_message():
-            picture = kwargs.get('send_picture')
-            if picture:
-                self.bot.send_photo(chat_id=message.chat_id, photo=picture)
-            return self.bot.reply_to(message, text, **kwargs)
+    def send_text_photo(self, message, text, picture=None, reply_to=False, **kwargs):
+        if picture:
+            self.bot.send_photo(chat_id=message.chat_id, photo=picture)
+        if reply_to:
+            kwargs['reply_to_message_id'] = message.message_id
+        return self.bot.send_message(message.chat_id, text, **kwargs)
+
+    def _send_smart_reply(self, message, text, picture=None, **kwargs):
+        send_message = functools.partial(self.send_text_photo, message, text, picture,
+                                         reply_to=True, **kwargs)
 
         # On groups or supergroups, check if I have
         # a recent previous response to refer
