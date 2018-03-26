@@ -218,6 +218,8 @@ class GDGAjuBot:
         # this function is cached for performance purposes
         @cache.cache('ensure_daily_book', expire=600)
         def ensure(self, chat_id):
+            logging.info("ensure_daily_book: checagens para enviar o livro do dia")
+
             # The book of the day ends at midnight in utc timezone, so we consider to send only if time is at least 22:00
             now = datetime.datetime.now(tz=util.UTC_TZ)
             if now.hour < 22:
@@ -234,6 +236,7 @@ class GDGAjuBot:
                 cover = book['cover'] if book else None
 
                 self.send_text_photo(message, response, cover, parse_mode="Markdown", disable_web_page_preview=True)
+                logging.info("ensure_daily_book: livro do dia enviado")
 
         ensure(message.chat_id)
 
