@@ -90,3 +90,14 @@ class Group(db.Entity):
 
     def __str__(self):
         return 'Group - {}'.format(self.telegram_groupname)
+
+
+class State(db.Entity):
+    telegram_id = orm.Required(int)
+    description = orm.Required(str)
+    moment = orm.Required(datetime)
+    info = orm.Optional(orm.Json)
+    orm.composite_key(telegram_id, description)
+
+    def __str__(self):
+        return 'State - "{}" : {}'.format(self.description, self.telegram_group)
