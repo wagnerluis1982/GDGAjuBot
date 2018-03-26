@@ -217,7 +217,7 @@ class GDGAjuBot:
 
         # this function is cached for performance purposes
         @cache.cache('ensure_daily_book', expire=600)
-        def ensure(self, chat_id):
+        def ensure(chat_id):
             logging.info("ensure_daily_book: checagens para enviar o livro do dia")
 
             # The book of the day ends at midnight in utc timezone, so we consider to send only if time is at least 22:00

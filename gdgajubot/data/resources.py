@@ -168,7 +168,12 @@ class Resources:
         description = 'daily:/book'
         if update:
             now = datetime.datetime.now(util.UTC_TZ)
-            State(telegram_id=chat_id, description=description, moment=now)
+            state = State.get(telegram_id=chat_id, description=description)
+
+            if state:
+                state.moment = now
+            else:
+                State(telegram_id=chat_id, description=description, moment=now)
         else:
             state = State.get_moment(chat_id, description)
             if state:
