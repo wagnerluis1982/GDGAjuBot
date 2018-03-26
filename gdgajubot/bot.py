@@ -5,6 +5,7 @@ import functools
 import logging
 import random
 import re
+from collections import OrderedDict
 
 from telegram.ext import CommandHandler, Updater
 from telegram.ext.filters import BaseFilter, Filters
@@ -47,11 +48,13 @@ ALREADY_ANSWERED_TEXTS = (
     "Deixe de insistência!",
 )
 
-TIME_LEFT = ((30, '30 segundos'),
-             (60, '1 minuto'),
-             (600, '10 minutos'),
-             (1800, 'meia hora'),
-             (3600, '1 hora'))
+TIME_LEFT = OrderedDict([
+    (30, '30 segundos'),
+    (60, '1 minuto'),
+    (600, '10 minutos'),
+    (1800, 'meia hora'),
+    (3600, '1 hora'),
+])
 
 
 class GDGAjuBot:
@@ -210,49 +213,58 @@ class GDGAjuBot:
     def packtpub_free_learning(self, message, now=None):
         """Retorna o livro disponível no free-learning da editora PacktPub."""
         logging.info("%s: %s", message.from_user.username, "/book")
-        # Faz duas tentativas para obter o livro do dia,
-        # por questões de possível cache antigo.
-        for _ in range(2):
-            book = self.resources.get_packt_free_book()
-            response = self._create_book_response(book, now)
-            if response:
-                break
-            Resources.cache.invalidate(
-                Resources.get_packt_free_book, "get_packt_free_book")
-        # As tentativas falharam...
-        else:
-            response = "Parece que não tem um livro grátis hoje 😡\n\n" \
-                       "Se acha que é um erro meu, veja com seus próprios olhos em " + Resources.BOOK_URL
+
+        book, response, left = self.__get_book(now)
+        if left is not None:
+            warning = "⌛️ Menos de %s!" % TIME_LEFT[left]
+            response += warning
+
+        cover = book['cover'] if book else None
+
         self._send_smart_reply(
             message, response,
             parse_mode="Markdown", disable_web_page_preview=True,
-            send_picture=book['cover'] if book else None
+            send_picture=cover
         )
 
-    def _create_book_response(self, book, now=None):
-        if book is None:
-            return
+    def __get_book(self, now=None):
+        # Faz duas tentativas para obter o livro do dia, por questões de possível cache antigo.
+        for _ in range(2):
+            book = self.resources.get_packt_free_book()
+            if book is None:
+                continue
 
-        if now is None:
-            now = datetime.datetime.now(tz=util.AJU_TZ)
+            if now is None:
+                now = datetime.datetime.now(tz=util.AJU_TZ)
 
-        delta = datetime.datetime.fromtimestamp(
-            book.expires, tz=util.AJU_TZ) - now
-        seconds = delta.total_seconds()
-        if seconds < 0:
-            return
+            delta = datetime.datetime.fromtimestamp(book.expires, tz=util.AJU_TZ) - now
+            delta = delta.total_seconds()
+            if delta < 0:
+                continue
 
-        response = (
-            "Confira o livro gratuito de hoje da Packt Publishing 🎁\n\n"
-            "📖 [%s](%s)\n"
-            "🔎 %s\n"
-        ) % (book.name, Resources.BOOK_URL, book.summary)
+            response = (
+                "Confira o livro gratuito de hoje da Packt Publishing 🎁\n\n"
+                "📖 [%s](%s)\n"
+                "🔎 %s\n"
+            ) % (book.name, Resources.BOOK_URL, book.summary)
 
-        for num, in_words in TIME_LEFT:
-            if seconds <= num:
-                warning = "⌛️ Menos de %s!" % in_words
-                return response + warning
-        return response
+            for left in TIME_LEFT:
+                if delta <= left:
+                    return book, response, left
+            else:
+                left = None
+
+            break
+
+        # As tentativas falharam...
+        else:
+            Resources.cache.invalidate(Resources.get_packt_free_book, "get_packt_free_book")
+            book = None
+            response = "Parece que não tem um livro grátis hoje 😡\n\n" \
+                       "Se acha que é um erro meu, veja com seus próprios olhos em " + Resources.BOOK_URL
+            left = None
+
+        return book, response, left
 
     def _send_smart_reply(self, message, text, **kwargs):
         def send_message():
