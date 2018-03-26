@@ -85,7 +85,7 @@ class Message(db.Entity):
 
 
 class Group(db.Entity):
-    telegram_id = orm.PrimaryKey(int)
+    telegram_id = orm.PrimaryKey(int, size=64)
     telegram_groupname = orm.Optional(str)
 
     def __str__(self):
@@ -93,7 +93,7 @@ class Group(db.Entity):
 
 
 class State(db.Entity):
-    telegram_id = orm.Required(int)
+    telegram_id = orm.Required(int, size=64)
     description = orm.Required(str)
     moment = orm.Required(datetime)
     info = orm.Optional(orm.Json)
