@@ -8,7 +8,7 @@ from beaker.util import parse_cache_config_options
 from bs4 import BeautifulSoup
 
 from gdgajubot import util
-from gdgajubot.data.database import db, orm, Message, User, Choice, ChoiceConverter
+from gdgajubot.data.database import db, orm, Message, User, Choice, ChoiceConverter, State
 
 
 class Resources:
@@ -162,6 +162,17 @@ class Resources:
 
         # Caso tenha havido algum problema usa a própria URL longa
         return long_url
+
+    @orm.db_session
+    def last_book_sent(self, chat_id: int, update=False) -> datetime.datetime:
+        description = 'daily:/book'
+        if update:
+            now = datetime.datetime.now(util.UTC_TZ)
+            State(telegram_id=chat_id, description=description, moment=now)
+        else:
+            state = State.get_moment(chat_id, description)
+            if state:
+                return state.moment
 
     @orm.db_session
     def log_message(self, message, *args, **kwargs):

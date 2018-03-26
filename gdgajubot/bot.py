@@ -34,6 +34,9 @@ commands = util.HandlerHelper()
 easter_egg = util.HandlerHelper()
 on_message = util.HandlerHelper()
 
+# Alias para reutilizar o cache como decorator
+cache = Resources.cache
+
 
 # Adapta a assinatura de função esperada por `add_handler` na API nova
 def adapt_callback(cb, *args, **kwargs):
@@ -209,6 +212,31 @@ class GDGAjuBot:
     def extract_and_save_data(self, message, *args, **kwargs):
         self.resources.log_message(message, *args, **kwargs)
 
+    @on_message('.*')
+    def ensure_daily_book(self, message):
+
+        # this function is cached for performance purposes
+        @cache.cache('ensure_daily_book', expire=600)
+        def ensure(self, chat_id):
+            # The book of the day ends at midnight in utc timezone, so we consider to send only if time is at least 22:00
+            now = datetime.datetime.now(tz=util.UTC_TZ)
+            if now.hour < 22:
+                return
+
+            # We send only if /book was called at least 3 hours ago
+            last = self.resources.last_book_sent(chat_id)
+            if not last or now.day > last.day and now.hour - last.hour > 3:
+                book, response, left = self.__get_book()
+                if left is not None:
+                    warning = "⌛️ Menos de %s!" % TIME_LEFT[left]
+                    response += warning
+
+                cover = book['cover'] if book else None
+
+                self.send_text_photo(message, response, cover, parse_mode="Markdown", disable_web_page_preview=True)
+
+        ensure(message.chat_id)
+
     @commands('/book')
     def packtpub_free_learning(self, message, now=None):
         """Retorna o livro disponível no free-learning da editora PacktPub."""
@@ -221,11 +249,14 @@ class GDGAjuBot:
 
         cover = book['cover'] if book else None
 
-        self._send_smart_reply(
+        has_sent = self._send_smart_reply(
             message, response,
             parse_mode="Markdown", disable_web_page_preview=True,
             picture=cover
         )
+
+        if has_sent:
+            self.resources.last_book_sent(message.chat_id, update=True)
 
     def __get_book(self, now=None):
         # Faz duas tentativas para obter o livro do dia, por questões de possível cache antigo.
@@ -292,6 +323,8 @@ class GDGAjuBot:
                     message.chat.id, '👆 ' + random.choice(ALREADY_ANSWERED_TEXTS),
                     reply_to_message_id=previous['message_id']
                 )
+                return False
+
             # or, send new response and update the cache
             else:
                 sent = send_message()
@@ -301,6 +334,8 @@ class GDGAjuBot:
         # On private chats or channels, send the normal reply...
         else:
             send_message()
+
+        return True
 
     @commands('/about')
     def about(self, message):
