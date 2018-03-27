@@ -259,7 +259,7 @@ class GDGAjuBot:
         )
 
         if has_sent:
-            self.resources.last_book_sent(message.chat_id, update=True)
+            self.resources.last_book_sent(message.chat_id, message.chat.username, update=True)
 
     def __get_book(self, now=None):
         # Faz duas tentativas para obter o livro do dia, por questões de possível cache antigo.

@@ -164,7 +164,7 @@ class Resources:
         return long_url
 
     @orm.db_session
-    def last_book_sent(self, chat_id: int, update=False) -> datetime.datetime:
+    def last_book_sent(self, chat_id: int, chat_name: str = None, update=False) -> datetime.datetime:
         description = 'daily:/book'
         if update:
             now = datetime.datetime.now(util.UTC_TZ)
@@ -173,7 +173,8 @@ class Resources:
             if state:
                 state.moment = now
             else:
-                State(telegram_id=chat_id, description=description, moment=now)
+                State(telegram_id=chat_id, description=description, moment=now,
+                      info={'chat': chat_name} if chat_name else None)
         else:
             state = State.get_moment(chat_id, description)
             if state:

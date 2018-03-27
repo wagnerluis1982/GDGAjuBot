@@ -65,7 +65,7 @@ class MockResources:
     def get_short_url(self, long_url):
         return long_url
 
-    def last_book_sent(self, chat_id, update):
+    def last_book_sent(self, chat_id, chat_name, update):
         pass
 
 
