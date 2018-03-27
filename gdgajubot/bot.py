@@ -225,9 +225,9 @@ class GDGAjuBot:
             if now.hour < 22:
                 return
 
-            # We send only if /book was called at least 3 hours ago
+            # We send only if /book was called at least 1 hours ago
             last = self.resources.last_book_sent(chat_id)
-            if not last or now.day > last.day and now.hour - last.hour > 3:
+            if not last or (now - last).total_seconds() >= 3600:
                 book, response, left = self.__get_book()
                 if left is not None:
                     warning = "⌛️ Menos de %s!" % TIME_LEFT[left]
