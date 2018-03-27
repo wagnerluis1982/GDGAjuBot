@@ -301,10 +301,14 @@ class GDGAjuBot:
         return book, response, left
 
     def send_text_photo(self, message, text, picture=None, reply_to=False, **kwargs):
-        if picture:
-            self.bot.send_photo(chat_id=message.chat_id, photo=picture)
         if reply_to:
             kwargs['reply_to_message_id'] = message.message_id
+
+        if picture:
+            self.bot.send_photo(message.chat_id, photo=picture, **kwargs)
+            if reply_to:
+                del kwargs['reply_to_message_id']
+
         return self.bot.send_message(message.chat_id, text, **kwargs)
 
     def _send_smart_reply(self, message, text, picture=None, **kwargs):

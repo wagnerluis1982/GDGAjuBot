@@ -197,8 +197,10 @@ class TestGDGAjuBot(unittest.TestCase):
         r = ("Confira o livro gratuito de hoje da Packt Publishing 🎁\n\n"
              "📖 [Android 2099](https://www.packtpub.com/packt/offers/free-learning)\n"
              "🔎 Good practices with Miguel O’Hara\n") + warning
-        bot.send_message.assert_called_with(message.chat_id, r, parse_mode="Markdown",
-                                            disable_web_page_preview=True, reply_to_message_id=message.message_id)
+        kw_call = dict(parse_mode="Markdown", disable_web_page_preview=True)
+
+        bot.send_photo.assert_called_with(message.chat_id, photo='//test.jpg', reply_to_message_id=message.message_id, **kw_call)
+        bot.send_message.assert_called_with(message.chat_id, r, **kw_call)
 
     def _assert_about(self, bot, message):
         self._assert_mockbot(bot)
