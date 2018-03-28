@@ -215,23 +215,22 @@ class GDGAjuBot:
     @on_message('.*')
     def ensure_daily_book(self, message):
         # using cache to avoid too much processing
-        ensure_cache = Resources.cache.get_cache('ensure_daily_book', expire=600)
-        if ensure_cache.has_key(message.chat_id):
-            return
-        else:
-            ensure_cache.set_value(message.chat_id, True)
+        ensure_cache = Resources.cache.get_cache('ensure_daily_book')
+        count = ensure_cache.get(message.chat_id, createfunc=int) + 1
+        ensure_cache[message.chat_id] = count
+
+        # consider to send if passed at least 50 messages
+        if count >= 50:
             logging.info("ensure_daily_book: checagens para enviar o livro do dia")
 
-            # The book of the day ends at midnight in utc timezone, so we consider to send only if time is at least 22:00
-            now = datetime.datetime.now(tz=util.UTC_TZ)
-            if now.hour < 22:
-                return
-
-            # We send only if /book was called at least 1 hours ago
+            # we send only if /book was called at least 6 hours ago or one hour ago if in the end of the day
             last = self.resources.last_book_sent(message.chat_id)
-            if not last or (now - last).total_seconds() >= 3600:
-                self.packtpub_free_learning(message, reply=False)
-                logging.info("ensure_daily_book: livro do dia enviado")
+            if last:
+                now = datetime.datetime.now(tz=util.UTC_TZ)
+                duration = (now - last).total_seconds()
+                if duration >= 21600 or duration >= 3600 and now.hour == 22:
+                    self.packtpub_free_learning(message, reply=False)
+                    logging.info("ensure_daily_book: livro do dia enviado")
 
     @commands('/book')
     def packtpub_free_learning(self, message, now=None, reply=True):
@@ -256,6 +255,8 @@ class GDGAjuBot:
         )
 
         if has_sent:
+            ensure_cache = Resources.cache.get_cache('ensure_daily_book')
+            ensure_cache[message.chat_id] = 0
             self.resources.last_book_sent(message.chat_id, message.chat.username, update=True)
 
     def __get_book(self, now=None):
