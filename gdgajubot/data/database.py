@@ -103,7 +103,9 @@ class State(db.Entity):
     @orm.db_session
     def get_moment(cls, telegram_id, description):
         try:
-            return db.get('SELECT moment FROM State WHERE telegram_id = $telegram_id AND description = $description')
+            state = cls.get_by_sql('SELECT id, moment FROM State '
+                                   'WHERE telegram_id = $telegram_id AND description = $description')
+            return state.moment
         except orm.RowNotFound:
             return None
 

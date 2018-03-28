@@ -176,9 +176,9 @@ class Resources:
                 State(telegram_id=chat_id, description=description, moment=now,
                       info={'chat': chat_name} if chat_name else None)
         else:
-            state = State.get_moment(chat_id, description)
-            if state:
-                return state.moment
+            moment = State.get_moment(chat_id, description)
+            if moment:
+                return moment.astimezone(util.UTC_TZ)
 
     @orm.db_session
     def log_message(self, message, *args, **kwargs):
