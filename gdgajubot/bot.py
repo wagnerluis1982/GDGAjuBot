@@ -214,10 +214,12 @@ class GDGAjuBot:
 
     @on_message('.*')
     def ensure_daily_book(self, message):
-
-        # this function is cached for performance purposes
-        @cache.cache('ensure_daily_book', expire=600)
-        def ensure(chat_id):
+        # using cache to avoid too much processing
+        ensure_cache = Resources.cache.get_cache('ensure_daily_book', expire=600)
+        if ensure_cache.has_key(message.chat_id):
+            return
+        else:
+            ensure_cache.set_value(message.chat_id, True)
             logging.info("ensure_daily_book: checagens para enviar o livro do dia")
 
             # The book of the day ends at midnight in utc timezone, so we consider to send only if time is at least 22:00
@@ -226,12 +228,10 @@ class GDGAjuBot:
                 return
 
             # We send only if /book was called at least 1 hours ago
-            last = self.resources.last_book_sent(chat_id)
+            last = self.resources.last_book_sent(message.chat_id)
             if not last or (now - last).total_seconds() >= 3600:
                 self.packtpub_free_learning(message, reply=False)
                 logging.info("ensure_daily_book: livro do dia enviado")
-
-        ensure(message.chat_id)
 
     @commands('/book')
     def packtpub_free_learning(self, message, now=None, reply=True):
