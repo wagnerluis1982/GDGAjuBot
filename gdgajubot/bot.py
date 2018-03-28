@@ -228,22 +228,19 @@ class GDGAjuBot:
             # We send only if /book was called at least 1 hours ago
             last = self.resources.last_book_sent(chat_id)
             if not last or (now - last).total_seconds() >= 3600:
-                book, response, left = self.__get_book()
-                if left is not None:
-                    warning = "⌛️ Menos de %s!" % TIME_LEFT[left]
-                    response += warning
-
-                cover = book['cover'] if book else None
-
-                self.send_text_photo(message, response, cover, parse_mode="Markdown", disable_web_page_preview=True)
+                self.packtpub_free_learning(message, reply=False)
                 logging.info("ensure_daily_book: livro do dia enviado")
 
         ensure(message.chat_id)
 
     @commands('/book')
-    def packtpub_free_learning(self, message, now=None):
+    def packtpub_free_learning(self, message, now=None, reply=True):
         """Retorna o livro disponível no free-learning da editora PacktPub."""
-        logging.info("%s: %s", message.from_user.username, "/book")
+        if reply:
+            logging.info("%s: %s", message.from_user.username, "/book")
+            send_message = self._send_smart_reply
+        else:
+            send_message = self.send_text_photo
 
         book, response, left = self.__get_book(now)
         if left is not None:
@@ -252,7 +249,7 @@ class GDGAjuBot:
 
         cover = book['cover'] if book else None
 
-        has_sent = self._send_smart_reply(
+        has_sent = send_message(
             message, response,
             parse_mode="Markdown", disable_web_page_preview=True,
             picture=cover
