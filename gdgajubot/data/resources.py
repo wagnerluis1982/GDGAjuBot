@@ -1,4 +1,5 @@
 import datetime
+import json
 import logging
 import requests
 import requests.exceptions
@@ -171,14 +172,20 @@ class Resources:
             state = State.get(telegram_id=chat_id, description=description)
 
             if state:
-                state.moment = now
+                info = JSONCodec().decode(state.info)
+                info['moment'] = now
+                state.info = JSONCodec().encode(info)
             else:
-                State(telegram_id=chat_id, description=description, moment=now,
-                      info={'chat': chat_name} if chat_name else None)
+                info = {'moment': now}
+                if chat_name:
+                    info['chat'] = chat_name
+
+                State(telegram_id=chat_id, description=description, info=JSONCodec().encode(info))
         else:
-            moment = State.get_moment(chat_id, description)
-            if moment:
-                return moment.astimezone(util.UTC_TZ)
+            state = State.get(telegram_id=chat_id, description=description)
+            if state:
+                info = JSONCodec().decode(state.info)
+                return info['moment']
 
     @orm.db_session
     def log_message(self, message, *args, **kwargs):
@@ -208,3 +215,32 @@ class Resources:
         except orm.ObjectNotFound:
             return False
         return user.is_bot_admin
+
+
+DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%f%z'
+
+
+class JSONCodec:
+    class Encoder(json.JSONEncoder):
+        def default(self, obj):
+            if isinstance(obj, datetime.datetime):
+                return {'__datetime__': obj.strftime(DATETIME_FORMAT)}
+            return super().default(obj)
+
+    class Decoder(json.JSONDecoder):
+        def __init__(self):
+            super().__init__(object_hook=self.object_hook)
+
+        @staticmethod
+        def object_hook(obj):
+            if '__datetime__' in obj:
+                return datetime.datetime.strptime(obj['__datetime__'], DATETIME_FORMAT)
+            return obj
+
+    # singleton
+    def __new__(cls, **kwargs):
+        if not hasattr(cls, 'instance'):
+            cls.instance = super().__new__(cls)
+            cls.instance.encode = cls.Encoder().encode
+            cls.instance.decode = cls.Decoder().decode
+        return cls.instance
