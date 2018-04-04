@@ -1,6 +1,8 @@
 import datetime
 import json
 import logging
+from typing import Dict
+
 import requests
 import requests.exceptions
 
@@ -10,6 +12,14 @@ from bs4 import BeautifulSoup
 
 from gdgajubot import util
 from gdgajubot.data.database import db, orm, Message, User, Choice, ChoiceConverter, State
+
+
+def json_encode(info):
+    return JSONCodec().encode(info)
+
+
+def json_decode(info):
+    return JSONCodec().decode(info)
 
 
 class Resources:
@@ -164,28 +174,27 @@ class Resources:
         # Caso tenha havido algum problema usa a própria URL longa
         return long_url
 
+    ChatInfo = dict
+    ChatState = Dict[int, ChatInfo]
+
     @orm.db_session
-    def last_book_sent(self, chat_id: int, chat_name: str = None, update=False) -> datetime.datetime:
-        description = 'daily:/book'
-        if update:
-            now = datetime.datetime.now(util.UTC_TZ)
-            state = State.get(telegram_id=chat_id, description=description)
+    def update_states(self, states: Dict[str, ChatState]):
+        for state_id, data in states.items():
+            for chat_id, chat_info in data.items():
+                try:
+                    state = State[chat_id, state_id]
+                    info = json_decode(state.info)
+                    info.update(chat_info)
+                    state.info = json_encode(info)
+                except orm.ObjectNotFound:
+                    State(telegram_id=chat_id, description=state_id, info=json_encode(chat_info))
 
-            if state:
-                info = JSONCodec().decode(state.info)
-                info['moment'] = now
-                state.info = JSONCodec().encode(info)
-            else:
-                info = {'moment': now}
-                if chat_name:
-                    info['chat'] = chat_name
-
-                State(telegram_id=chat_id, description=description, info=JSONCodec().encode(info))
-        else:
-            state = State.get(telegram_id=chat_id, description=description)
-            if state:
-                info = JSONCodec().decode(state.info)
-                return info['moment']
+    @orm.db_session
+    def get_state(self, state_id: str, chat_id: int) -> ChatInfo:
+        state = State.get(telegram_id=chat_id, description=state_id)
+        if state:
+            return json_decode(state.info)
+        return {}
 
     @orm.db_session
     def log_message(self, message, *args, **kwargs):

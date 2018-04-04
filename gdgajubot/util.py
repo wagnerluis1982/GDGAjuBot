@@ -1,10 +1,11 @@
 import argparse
 import datetime
 import functools
-import logging
 import os
 import random
 import re
+from collections import defaultdict
+
 import requests
 import threading
 from urllib import parse
@@ -186,7 +187,6 @@ class TimeZone:
 
 # aliases úteis
 AJU_TZ = TimeZone.gmt(-3)
-UTC_TZ = TimeZone.gmt(0)
 
 
 class Atomic:
@@ -207,6 +207,17 @@ class Atomic:
             if self._value is None:
                 self.set(on_none_f())
             return self._value
+
+
+class MissingDict(defaultdict):
+    def __init__(self, default_factory, **kwargs):
+        super().__init__(default_factory, **kwargs)
+
+    def __missing__(self, key):
+        if self.default_factory is not None:
+            self[key] = value = self.default_factory(key)
+            return value
+        return super().__missing__(key)
 
 
 class AttributeDict(dict):

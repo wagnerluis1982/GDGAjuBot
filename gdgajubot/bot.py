@@ -7,12 +7,13 @@ import random
 import re
 from collections import OrderedDict
 
+import atexit
 from telegram.ext import CommandHandler, Updater
 from telegram.ext.filters import BaseFilter, Filters
 from telegram.ext.messagehandler import MessageHandler
 
 from gdgajubot.data.resources import Resources
-from gdgajubot.util import do_not_spam
+from gdgajubot.util import do_not_spam, MissingDict
 from gdgajubot import util
 
 
@@ -64,6 +65,13 @@ class GDGAjuBot:
     def __init__(self, config, bot=None, resources=None):
         self.config = config
         self.resources = resources if resources else Resources(config)
+        self.states = MissingDict(
+            lambda state_id: MissingDict(
+                lambda chat_id: self.resources.get_state(state_id, chat_id)
+            )
+        )
+
+        atexit.register(self.resources.update_states, self.states)
 
         # O parâmetro bot só possui valor nos casos de teste, nesse caso,
         # encerra o __init__ aqui para não haver conexão ao Telegram.
@@ -214,19 +222,26 @@ class GDGAjuBot:
 
     @on_message('.*')
     def ensure_daily_book(self, message):
-        # using cache to avoid too much processing
-        ensure_cache = Resources.cache.get_cache('ensure_daily_book')
-        count = ensure_cache.get(message.chat_id, createfunc=int) + 1
-        ensure_cache[message.chat_id] = count
+        info: dict = self.states['daily_book'][message.chat_id]
+
+        if 'chat' not in info:
+            info['chat'] = message.chat.username
+
+        count = info.get('messages_since', 0)
+        count += 1
+        info['messages_since'] = count
+
+        if 'last_time' not in info:
+            info['last_time'] = datetime.datetime.now(tz=util.AJU_TZ)
 
         # consider to send if passed at least 50 messages
-        if count >= 50:
+        elif count >= 50:
             logging.info("ensure_daily_book: checagens para enviar o livro do dia")
 
             # we send only if /book was called at least 6 hours ago or one hour ago if in the end of the day
-            last = self.resources.last_book_sent(message.chat_id)
+            last = info['last_time']
             if last:
-                now = datetime.datetime.now(tz=util.UTC_TZ)
+                now = datetime.datetime.now(tz=util.AJU_TZ)
                 duration = (now - last).total_seconds()
                 if duration >= 21600 or duration >= 3600 and now.hour == 22:
                     self.packtpub_free_learning(message, reply=False)
@@ -240,6 +255,9 @@ class GDGAjuBot:
             send_message = self._send_smart_reply
         else:
             send_message = self.send_text_photo
+
+        if now is None:
+            now = datetime.datetime.now(tz=util.AJU_TZ)
 
         book, response, left = self.__get_book(now)
         if left is not None:
@@ -255,9 +273,7 @@ class GDGAjuBot:
         )
 
         if has_sent:
-            ensure_cache = Resources.cache.get_cache('ensure_daily_book')
-            ensure_cache[message.chat_id] = 0
-            self.resources.last_book_sent(message.chat_id, message.chat.username, update=True)
+            self.states['daily_book'][message.chat_id]['last_time'] = now
 
     def __get_book(self, now=None):
         # Faz duas tentativas para obter o livro do dia, por questões de possível cache antigo.
