@@ -179,6 +179,7 @@ class Resources:
 
     @orm.db_session
     def update_states(self, states: Dict[str, ChatState]):
+        logging.info('update_states(%s)', states)
         for state_id, data in states.items():
             for chat_id, chat_info in data.items():
                 try:
