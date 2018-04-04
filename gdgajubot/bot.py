@@ -234,18 +234,21 @@ class GDGAjuBot:
         if 'last_time' not in info:
             info['last_time'] = datetime.datetime.now(tz=util.AJU_TZ)
 
-        # consider to send if passed at least 50 messages
-        elif count >= 50:
+        # consider to send if has passed at least 5 messages since last sent book
+        elif count >= 5:
             logging.info("ensure_daily_book: checagens para enviar o livro do dia")
 
-            # we send only if /book was called at least 6 hours ago or one hour ago if in the end of the day
             last = info['last_time']
-            if last:
-                now = datetime.datetime.now(tz=util.AJU_TZ)
-                duration = (now - last).total_seconds()
-                if duration >= 21600 or duration >= 3600 and now.hour == 22:
-                    self.packtpub_free_learning(message, reply=False)
-                    logging.info("ensure_daily_book: livro do dia enviado")
+            now = datetime.datetime.now(tz=util.AJU_TZ)
+            passed = now - last
+
+            # we should send if
+            if (passed.days >= 1  # has passed 5 messages and 1 day or more since last book was sent
+                    or count >= 25 and passed.seconds >= 12 * 3600    # passed 25 messages and 12 hours or more
+                    or count >= 100 and passed.seconds >= 6 * 3600    # passed 100 messages and 6 hours or more
+                    or count >= 300 and passed.seconds >= 3 * 3600):  # passed 300 messages and 3 hours or more
+                self.packtpub_free_learning(message, reply=False)
+                logging.info("ensure_daily_book: livro do dia enviado")
 
     @commands('/book')
     def packtpub_free_learning(self, message, now=None, reply=True):
