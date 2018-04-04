@@ -220,6 +220,19 @@ class MissingDict(defaultdict):
         return super().__missing__(key)
 
 
+class StateDict(dict):
+    def __init__(self, data, dump_function):
+        super().__init__()
+        self.dump = lambda: dump_function(self)
+        self.update(data)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.dump()
+
+
 class AttributeDict(dict):
     __getattr__ = dict.__getitem__
     __setattr__ = dict.__setitem__

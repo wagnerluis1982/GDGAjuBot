@@ -7,13 +7,12 @@ import random
 import re
 from collections import OrderedDict
 
-import atexit
 from telegram.ext import CommandHandler, Updater
 from telegram.ext.filters import BaseFilter, Filters
 from telegram.ext.messagehandler import MessageHandler
 
 from gdgajubot.data.resources import Resources
-from gdgajubot.util import do_not_spam, MissingDict
+from gdgajubot.util import do_not_spam, MissingDict, StateDict
 from gdgajubot import util
 
 
@@ -67,11 +66,12 @@ class GDGAjuBot:
         self.resources = resources if resources else Resources(config)
         self.states = MissingDict(
             lambda state_id: MissingDict(
-                lambda chat_id: self.resources.get_state(state_id, chat_id)
+                lambda chat_id: StateDict(
+                    self.resources.get_state(state_id, chat_id),
+                    lambda info: self.resources.set_state(state_id, chat_id, info)
+                )
             )
         )
-
-        atexit.register(self.resources.update_states, self.states)
 
         # O parâmetro bot só possui valor nos casos de teste, nesse caso,
         # encerra o __init__ aqui para não haver conexão ao Telegram.
@@ -222,8 +222,10 @@ class GDGAjuBot:
 
     @on_message('.*')
     def ensure_daily_book(self, message):
-        info: dict = self.states['daily_book'][message.chat_id]
+        with self.states['daily_book'][message.chat_id] as info:
+            self.__daily_book(message, info)
 
+    def __daily_book(self, message, info):
         if 'chat' not in info:
             info['chat'] = message.chat.username
 
@@ -276,7 +278,8 @@ class GDGAjuBot:
         )
 
         if has_sent:
-            self.states['daily_book'][message.chat_id]['last_time'] = now
+            with self.states['daily_book'][message.chat_id] as info:
+                info['last_time'] = now
 
     def __get_book(self, now=None):
         # Faz duas tentativas para obter o livro do dia, por questões de possível cache antigo.

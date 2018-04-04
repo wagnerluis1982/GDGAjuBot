@@ -175,20 +175,16 @@ class Resources:
         return long_url
 
     ChatInfo = dict
-    ChatState = Dict[int, ChatInfo]
 
     @orm.db_session
-    def update_states(self, states: Dict[str, ChatState]):
-        logging.info('update_states(%s)', states)
-        for state_id, data in states.items():
-            for chat_id, chat_info in data.items():
-                try:
-                    state = State[chat_id, state_id]
-                    info = json_decode(state.info)
-                    info.update(chat_info)
-                    state.info = json_encode(info)
-                except orm.ObjectNotFound:
-                    State(telegram_id=chat_id, description=state_id, info=json_encode(chat_info))
+    def set_state(self, state_id: str, chat_id: int, chat_info: ChatInfo):
+        try:
+            state = State[chat_id, state_id]
+            info = json_decode(state.info)
+            info.update(chat_info)
+            state.info = json_encode(info)
+        except orm.ObjectNotFound:
+            State(telegram_id=chat_id, description=state_id, info=json_encode(chat_info))
 
     @orm.db_session
     def get_state(self, state_id: str, chat_id: int) -> ChatInfo:
