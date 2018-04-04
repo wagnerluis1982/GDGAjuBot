@@ -178,7 +178,7 @@ class GDGAjuBot:
     @commands('/events')
     def list_upcoming_events(self, message):
         """Retorna a lista de eventos do Meetup."""
-        logging.info("%s: %s", message.from_user.username, "/events")
+        logging.info("%s: %s", message.from_user.name, "/events")
         try:
             next_events = self.resources.get_events(5)
             if next_events:
@@ -236,7 +236,7 @@ class GDGAjuBot:
     def packtpub_free_learning(self, message, now=None, reply=True):
         """Retorna o livro disponível no free-learning da editora PacktPub."""
         if reply:
-            logging.info("%s: %s", message.from_user.username, "/book")
+            logging.info("%s: %s", message.from_user.name, "/book")
             send_message = self._send_smart_reply
         else:
             send_message = self.send_text_photo
@@ -344,7 +344,7 @@ class GDGAjuBot:
 
     @commands('/about')
     def about(self, message):
-        logging.info("%s: %s", message.from_user.username, "/about")
+        logging.info("%s: %s", message.from_user.name, "/about")
         response = "Esse bot obtém informações de eventos do Meetup ou Facebook. "
         response += "Para saber mais ou contribuir: https://github.com/GDGAracaju/GDGAjuBot/"
         self.bot.send_message(message.chat.id, response)
@@ -359,23 +359,23 @@ class GDGAjuBot:
     @easter_egg(find_ruby)
     def love_ruby(self, message):
         """Easter Egg com o Ruby."""
-        logging.info("%s: %s", message.from_user.username, "ruby")
-        username = message.from_user.username
+        logging.info("%s: %s", message.from_user.name, "ruby")
+        username = message.from_user.name
         self.bot.send_message(
             message.chat.id,
-            "@{} ama Ruby... ou Rails?".format(username),
+            "{} ama Ruby... ou Rails?".format(username),
         )
 
     @easter_egg(find_java)
     def memory_java(self, message):
         """Easter Egg com o Java."""
-        logging.info("%s: %s", message.from_user.username, "java")
+        logging.info("%s: %s", message.from_user.name, "java")
         self.bot.send_message(message.chat.id, "Ihh... acabou a RAM")
 
     @easter_egg(find_python)
     def easter_python(self, message):
         """Easter Egg com o Python."""
-        logging.info("%s: %s", message.from_user.username, "python")
+        logging.info("%s: %s", message.from_user.name, "python")
         self.bot.send_message(message.chat.id, "import antigravity")
 
     def start(self):
@@ -384,7 +384,7 @@ class GDGAjuBot:
         logging.info("Este é o bot do {0}".format(self.config.group_name))
         if self.config.debug_mode:
             logging.info("Modo do desenvolvedor ativado")
-            logging.info("Usando o bot @%s", self.bot.get_me().username)
+            logging.info("Usando o bot %s", self.bot.get_me().name)
             logging.info(
                 "Usando telegram_token={0}".format(self.config.telegram_token))
             logging.info(

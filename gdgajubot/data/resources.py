@@ -187,7 +187,7 @@ class Resources:
         except orm.ObjectNotFound:
             user = User(
                 telegram_id=message.from_user.id,
-                telegram_username=message.from_user.username,
+                telegram_username=message.from_user.name,
             )
         message = Message(
             sent_by=user, text=message.text, sent_at=message.date,
