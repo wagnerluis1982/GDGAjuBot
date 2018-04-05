@@ -174,20 +174,20 @@ class Resources:
         # Caso tenha havido algum problema usa a própria URL longa
         return long_url
 
-    ChatInfo = dict
+    ChatState = dict
 
     @orm.db_session
-    def set_state(self, state_id: str, chat_id: int, chat_info: ChatInfo):
+    def set_state(self, state_id: str, chat_id: int, chat_state: ChatState):
         try:
             state = State[chat_id, state_id]
             info = json_decode(state.info)
-            info.update(chat_info)
+            info.update(chat_state)
             state.info = json_encode(info)
         except orm.ObjectNotFound:
-            State(telegram_id=chat_id, description=state_id, info=json_encode(chat_info))
+            State(telegram_id=chat_id, description=state_id, info=json_encode(chat_state))
 
     @orm.db_session
-    def get_state(self, state_id: str, chat_id: int) -> ChatInfo:
+    def get_state(self, state_id: str, chat_id: int) -> ChatState:
         state = State.get(telegram_id=chat_id, description=state_id)
         if state:
             return json_decode(state.info)

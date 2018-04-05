@@ -68,7 +68,7 @@ class GDGAjuBot:
             lambda state_id: MissingDict(
                 lambda chat_id: StateDict(
                     self.resources.get_state(state_id, chat_id),
-                    lambda info: self.resources.set_state(state_id, chat_id, info)
+                    lambda state: self.resources.set_state(state_id, chat_id, state)
                 )
             )
         )
@@ -222,25 +222,25 @@ class GDGAjuBot:
 
     @on_message('.*')
     def ensure_daily_book(self, message):
-        info = self.states['daily_book'][message.chat_id]
+        state = self.states['daily_book'][message.chat_id]
 
-        if 'chat' not in info:
-            info['chat'] = message.chat.username
+        if 'chat' not in state:
+            state['chat'] = message.chat.username
 
-        count = info.get('messages_since', 0)
+        count = state.get('messages_since', 0)
         count += 1
-        info['messages_since'] = count
+        state['messages_since'] = count
 
-        if 'last_time' not in info:
-            info['last_time'] = datetime.datetime.now(tz=util.AJU_TZ)
-            info.dump()
+        if 'last_time' not in state:
+            state['last_time'] = datetime.datetime.now(tz=util.AJU_TZ)
+            state.dump()
             return
 
         # reduce dumping state by not going ahead if last book was sent in less than 5 messages
         if count < 5:
             return
 
-        last = info['last_time']
+        last = state['last_time']
         now = datetime.datetime.now(tz=util.AJU_TZ)
         passed = now - last
 
@@ -248,7 +248,7 @@ class GDGAjuBot:
         if passed.days == 0 and passed.seconds < 3 * 3600:
             return
 
-        with info:
+        with state:
             self.__daily_book(message, count, last, passed)
 
     def __daily_book(self, message, count, last, passed):
@@ -302,9 +302,9 @@ class GDGAjuBot:
         )
 
         if has_sent:
-            with self.states['daily_book'][message.chat_id] as info:
-                info['last_time'] = now
-                info['messages_since'] = 0
+            with self.states['daily_book'][message.chat_id] as state:
+                state['last_time'] = now
+                state['messages_since'] = 0
 
     def __get_book(self, now=None):
         # Faz duas tentativas para obter o livro do dia, por questões de possível cache antigo.

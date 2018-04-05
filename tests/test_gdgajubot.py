@@ -65,7 +65,7 @@ class MockResources:
     def get_short_url(self, long_url):
         return long_url
 
-    def set_state(self, state_id, chat_id, chat_info):
+    def set_state(self, state_id, chat_id, chat_state):
         pass
 
     def get_state(self, state_id, chat_id):
