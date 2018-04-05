@@ -244,16 +244,16 @@ class GDGAjuBot:
         now = datetime.datetime.now(tz=util.AJU_TZ)
         passed = now - last
 
+        logging.info("ensure_daily_book: checking %s count=%d last=%s", message.chat.username, count, last)
+
         # also keep going ahead if last book was sent in less than 3 hours ago
         if passed.days == 0 and passed.seconds < 3 * 3600:
             return
 
         with state:
-            self.__daily_book(message, count, last, passed)
+            self.__daily_book(message, count, passed)
 
-    def __daily_book(self, message, count, last, passed):
-        logging.info("ensure_daily_book: checking %s count=%d last=%s", message.chat.username, count, last)
-
+    def __daily_book(self, message, count, passed):
         # consider to send if has passed at least 5 messages since last sent book
         if count >= 5:
             say = None
