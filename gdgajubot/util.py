@@ -225,12 +225,16 @@ class StateDict(dict):
         super().__init__()
         self.dump = lambda: dump_function(self)
         self.update(data)
+        self.contexts = 0
 
     def __enter__(self):
+        self.contexts += 1
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.dump()
+        self.contexts -= 1
+        if self.contexts == 0:
+            self.dump()
 
 
 class AttributeDict(dict):
