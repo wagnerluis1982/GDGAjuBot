@@ -222,10 +222,8 @@ class GDGAjuBot:
 
     @on_message('.*')
     def ensure_daily_book(self, message):
-        with self.states['daily_book'][message.chat_id] as info:
-            self.__daily_book(message, info)
+        info = self.states['daily_book'][message.chat_id]
 
-    def __daily_book(self, message, info):
         if 'chat' not in info:
             info['chat'] = message.chat.username
 
@@ -235,15 +233,30 @@ class GDGAjuBot:
 
         if 'last_time' not in info:
             info['last_time'] = datetime.datetime.now(tz=util.AJU_TZ)
+            info.dump()
+            return
+
+        # reduce dumping state by not going ahead if last book was sent in less than 5 messages
+        if count < 5:
+            return
+
+        last = info['last_time']
+        now = datetime.datetime.now(tz=util.AJU_TZ)
+        passed = now - last
+
+        # also keep going ahead if last book was sent in less than 3 hours ago
+        if passed.days == 0 and passed.seconds < 3 * 3600:
+            return
+
+        with info:
+            self.__daily_book(message, count, last, passed)
+
+    def __daily_book(self, message, count, last, passed):
+        logging.info("ensure_daily_book: checking %s count=%d last=%s", message.chat.username, count, last)
 
         # consider to send if has passed at least 5 messages since last sent book
-        elif count >= 5:
-            last = info['last_time']
-            now = datetime.datetime.now(tz=util.AJU_TZ)
-            passed = now - last
+        if count >= 5:
             say = None
-
-            logging.info("ensure_daily_book: checking %s count=%d last=%s", message.chat.username, count, last)
 
             # we should send if
             if passed.days >= 1:  # has passed 5 messages and 1 day or more since last book was sent
