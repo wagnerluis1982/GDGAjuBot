@@ -194,6 +194,12 @@ class Resources:
         return {}
 
     @orm.db_session
+    def update_states(self, states: Dict[str, Dict[int, ChatState]]):
+        for state_id, data in states.items():
+            for chat_id, chat_state in data.items():
+                self.set_state(state_id, chat_id, chat_state)
+
+    @orm.db_session
     def log_message(self, message, *args, **kwargs):
         try:
             user = User[message.from_user.id]
