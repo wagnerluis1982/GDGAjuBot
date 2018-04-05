@@ -243,12 +243,23 @@ class GDGAjuBot:
             last = info['last_time']
             now = datetime.datetime.now(tz=util.AJU_TZ)
             passed = now - last
+            say = None
 
             # we should send if
-            if (passed.days >= 1  # has passed 5 messages and 1 day or more since last book was sent
-                    or count >= 25 and passed.seconds >= 12 * 3600    # passed 25 messages and 12 hours or more
-                    or count >= 100 and passed.seconds >= 6 * 3600    # passed 100 messages and 6 hours or more
-                    or count >= 300 and passed.seconds >= 3 * 3600):  # passed 300 messages and 3 hours or more
+            if passed.days >= 1:  # has passed 5 messages and 1 day or more since last book was sent
+                say = "Faz um tempão que não me pedem o livro do dia... mas não se preocupem, eu estou aqui 😏"
+            elif count >= 25:  # passed 25 messages and 12 hours or more
+                if passed.seconds >= 12 * 3600:
+                    say = "Ei, faz algum tempo que não mando o livro do dia, vou fazer agora!"
+                elif count >= 100:  # passed 100 messages and 6 hours or more
+                    if passed.seconds >= 6 * 3600:
+                        say = "Não percam o livro do dia!!!"
+                    elif count >= 300:  # passed 300 messages and 3 hours or more
+                        if passed.seconds >= 3 * 3600:
+                            say = "Passou um monte de mensagens, talvez você não tenha visto o livro do dia!"
+
+            if say:
+                self.bot.send_message(message.chat_id, f'__{say}__', parse_mode="Markdown")
                 self.packtpub_free_learning(message, reply=False)
                 logging.info("ensure_daily_book: livro do dia enviado")
 
