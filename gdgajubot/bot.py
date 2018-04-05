@@ -238,12 +238,12 @@ class GDGAjuBot:
 
         # consider to send if has passed at least 5 messages since last sent book
         elif count >= 5:
-            logging.info("ensure_daily_book: checagens para enviar o livro do dia")
-
             last = info['last_time']
             now = datetime.datetime.now(tz=util.AJU_TZ)
             passed = now - last
             say = None
+
+            logging.info("ensure_daily_book: checking %s count=%d last=%s", message.chat.username, count, last)
 
             # we should send if
             if passed.days >= 1:  # has passed 5 messages and 1 day or more since last book was sent
@@ -261,7 +261,7 @@ class GDGAjuBot:
             if say:
                 self.bot.send_message(message.chat_id, f'__{say}__', parse_mode="Markdown")
                 self.packtpub_free_learning(message, reply=False)
-                logging.info("ensure_daily_book: livro do dia enviado")
+                logging.info("ensure_daily_book: sent to %s", message.chat.username)
 
     @commands('/book')
     def packtpub_free_learning(self, message, now=None, reply=True):
