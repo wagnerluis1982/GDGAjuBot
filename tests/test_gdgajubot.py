@@ -65,8 +65,11 @@ class MockResources:
     def get_short_url(self, long_url):
         return long_url
 
-    def last_book_sent(self, chat_id, chat_name, update):
+    def set_state(self, state_id, chat_id, chat_info):
         pass
+
+    def get_state(self, state_id, chat_id):
+        return {}
 
 
 class TestGDGAjuBot(unittest.TestCase):

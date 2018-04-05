@@ -95,19 +95,8 @@ class Group(db.Entity):
 class State(db.Entity):
     telegram_id = orm.Required(int, size=64)
     description = orm.Required(str)
-    moment = orm.Required(datetime)
-    info = orm.Optional(orm.Json)
-    orm.composite_key(telegram_id, description)
-
-    @classmethod
-    @orm.db_session
-    def get_moment(cls, telegram_id, description):
-        try:
-            state = cls.get_by_sql('SELECT id, moment FROM State '
-                                   'WHERE telegram_id = $telegram_id AND description = $description')
-            return state.moment
-        except orm.RowNotFound:
-            return None
+    info = orm.Optional(str)
+    orm.PrimaryKey(telegram_id, description)
 
     def __str__(self):
-        return 'State - "{}" : {}'.format(self.description, self.telegram_group)
+        return 'State - "{}" : {}'.format(self.description, self.info)

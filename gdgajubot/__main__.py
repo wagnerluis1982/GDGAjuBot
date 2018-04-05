@@ -1,15 +1,20 @@
 import argparse
 import logging
 
+import os
+
 from gdgajubot import util
 from gdgajubot.bot import GDGAjuBot
 
 
 def main():
+    log_format = os.environ.get('LOG_FORMAT', '%(asctime)s %(message)s')
+    log_datefmt = os.environ.get('LOG_DATE_FORMAT', '%m/%d/%Y %I:%M:%S %p')
+
     # Configuring log
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p'
+        format=log_format, datefmt=log_datefmt
     )
 
     # Configuring bot parameters

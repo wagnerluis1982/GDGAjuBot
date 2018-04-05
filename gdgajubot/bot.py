@@ -12,7 +12,7 @@ from telegram.ext.filters import BaseFilter, Filters
 from telegram.ext.messagehandler import MessageHandler
 
 from gdgajubot.data.resources import Resources
-from gdgajubot.util import do_not_spam
+from gdgajubot.util import do_not_spam, MissingDict, StateDict
 from gdgajubot import util
 
 
@@ -64,6 +64,14 @@ class GDGAjuBot:
     def __init__(self, config, bot=None, resources=None):
         self.config = config
         self.resources = resources if resources else Resources(config)
+        self.states = MissingDict(
+            lambda state_id: MissingDict(
+                lambda chat_id: StateDict(
+                    self.resources.get_state(state_id, chat_id),
+                    lambda info: self.resources.set_state(state_id, chat_id, info)
+                )
+            )
+        )
 
         # O parâmetro bot só possui valor nos casos de teste, nesse caso,
         # encerra o __init__ aqui para não haver conexão ao Telegram.
@@ -178,7 +186,7 @@ class GDGAjuBot:
     @commands('/events')
     def list_upcoming_events(self, message):
         """Retorna a lista de eventos do Meetup."""
-        logging.info("%s: %s", message.from_user.username, "/events")
+        logging.info("%s: %s", message.from_user.name, "/events")
         try:
             next_events = self.resources.get_events(5)
             if next_events:
@@ -214,32 +222,58 @@ class GDGAjuBot:
 
     @on_message('.*')
     def ensure_daily_book(self, message):
-        # using cache to avoid too much processing
-        ensure_cache = Resources.cache.get_cache('ensure_daily_book')
-        count = ensure_cache.get(message.chat_id, createfunc=int) + 1
-        ensure_cache[message.chat_id] = count
+        with self.states['daily_book'][message.chat_id] as info:
+            self.__daily_book(message, info)
 
-        # consider to send if passed at least 50 messages
-        if count >= 50:
-            logging.info("ensure_daily_book: checagens para enviar o livro do dia")
+    def __daily_book(self, message, info):
+        if 'chat' not in info:
+            info['chat'] = message.chat.username
 
-            # we send only if /book was called at least 6 hours ago or one hour ago if in the end of the day
-            last = self.resources.last_book_sent(message.chat_id)
-            if last:
-                now = datetime.datetime.now(tz=util.UTC_TZ)
-                duration = (now - last).total_seconds()
-                if duration >= 21600 or duration >= 3600 and now.hour == 22:
-                    self.packtpub_free_learning(message, reply=False)
-                    logging.info("ensure_daily_book: livro do dia enviado")
+        count = info.get('messages_since', 0)
+        count += 1
+        info['messages_since'] = count
+
+        if 'last_time' not in info:
+            info['last_time'] = datetime.datetime.now(tz=util.AJU_TZ)
+
+        # consider to send if has passed at least 5 messages since last sent book
+        elif count >= 5:
+            last = info['last_time']
+            now = datetime.datetime.now(tz=util.AJU_TZ)
+            passed = now - last
+            say = None
+
+            logging.info("ensure_daily_book: checking %s count=%d last=%s", message.chat.username, count, last)
+
+            # we should send if
+            if passed.days >= 1:  # has passed 5 messages and 1 day or more since last book was sent
+                say = "Faz um tempão que não me pedem o livro do dia... mas não se preocupem, eu estou aqui 😏"
+            elif count >= 25:  # passed 25 messages and 12 hours or more
+                if passed.seconds >= 12 * 3600:
+                    say = "Ei, faz algum tempo que não mando o livro do dia, vou fazer agora!"
+                elif count >= 100:  # passed 100 messages and 6 hours or more
+                    if passed.seconds >= 6 * 3600:
+                        say = "Não percam o livro do dia!!!"
+                    elif count >= 300:  # passed 300 messages and 3 hours or more
+                        if passed.seconds >= 3 * 3600:
+                            say = "Passou um monte de mensagens, talvez você não tenha visto o livro do dia!"
+
+            if say:
+                self.bot.send_message(message.chat_id, f'__{say}__', parse_mode="Markdown")
+                self.packtpub_free_learning(message, reply=False)
+                logging.info("ensure_daily_book: sent to %s", message.chat.username)
 
     @commands('/book')
     def packtpub_free_learning(self, message, now=None, reply=True):
         """Retorna o livro disponível no free-learning da editora PacktPub."""
         if reply:
-            logging.info("%s: %s", message.from_user.username, "/book")
+            logging.info("%s: %s", message.from_user.name, "/book")
             send_message = self._send_smart_reply
         else:
             send_message = self.send_text_photo
+
+        if now is None:
+            now = datetime.datetime.now(tz=util.AJU_TZ)
 
         book, response, left = self.__get_book(now)
         if left is not None:
@@ -255,9 +289,9 @@ class GDGAjuBot:
         )
 
         if has_sent:
-            ensure_cache = Resources.cache.get_cache('ensure_daily_book')
-            ensure_cache[message.chat_id] = 0
-            self.resources.last_book_sent(message.chat_id, message.chat.username, update=True)
+            with self.states['daily_book'][message.chat_id] as info:
+                info['last_time'] = now
+                info['messages_since'] = 0
 
     def __get_book(self, now=None):
         # Faz duas tentativas para obter o livro do dia, por questões de possível cache antigo.
@@ -344,7 +378,7 @@ class GDGAjuBot:
 
     @commands('/about')
     def about(self, message):
-        logging.info("%s: %s", message.from_user.username, "/about")
+        logging.info("%s: %s", message.from_user.name, "/about")
         response = "Esse bot obtém informações de eventos do Meetup ou Facebook. "
         response += "Para saber mais ou contribuir: https://github.com/GDGAracaju/GDGAjuBot/"
         self.bot.send_message(message.chat.id, response)
@@ -359,23 +393,23 @@ class GDGAjuBot:
     @easter_egg(find_ruby)
     def love_ruby(self, message):
         """Easter Egg com o Ruby."""
-        logging.info("%s: %s", message.from_user.username, "ruby")
-        username = message.from_user.username
+        logging.info("%s: %s", message.from_user.name, "ruby")
+        username = message.from_user.name
         self.bot.send_message(
             message.chat.id,
-            "@{} ama Ruby... ou Rails?".format(username),
+            "{} ama Ruby... ou Rails?".format(username),
         )
 
     @easter_egg(find_java)
     def memory_java(self, message):
         """Easter Egg com o Java."""
-        logging.info("%s: %s", message.from_user.username, "java")
+        logging.info("%s: %s", message.from_user.name, "java")
         self.bot.send_message(message.chat.id, "Ihh... acabou a RAM")
 
     @easter_egg(find_python)
     def easter_python(self, message):
         """Easter Egg com o Python."""
-        logging.info("%s: %s", message.from_user.username, "python")
+        logging.info("%s: %s", message.from_user.name, "python")
         self.bot.send_message(message.chat.id, "import antigravity")
 
     def start(self):
@@ -384,7 +418,7 @@ class GDGAjuBot:
         logging.info("Este é o bot do {0}".format(self.config.group_name))
         if self.config.debug_mode:
             logging.info("Modo do desenvolvedor ativado")
-            logging.info("Usando o bot @%s", self.bot.get_me().username)
+            logging.info("Usando o bot %s", self.bot.get_me().name)
             logging.info(
                 "Usando telegram_token={0}".format(self.config.telegram_token))
             logging.info(

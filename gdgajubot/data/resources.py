@@ -1,5 +1,8 @@
 import datetime
+import json
 import logging
+from typing import Dict
+
 import requests
 import requests.exceptions
 
@@ -9,6 +12,14 @@ from bs4 import BeautifulSoup
 
 from gdgajubot import util
 from gdgajubot.data.database import db, orm, Message, User, Choice, ChoiceConverter, State
+
+
+def json_encode(info):
+    return JSONCodec().encode(info)
+
+
+def json_decode(info):
+    return JSONCodec().decode(info)
 
 
 class Resources:
@@ -163,22 +174,24 @@ class Resources:
         # Caso tenha havido algum problema usa a própria URL longa
         return long_url
 
-    @orm.db_session
-    def last_book_sent(self, chat_id: int, chat_name: str = None, update=False) -> datetime.datetime:
-        description = 'daily:/book'
-        if update:
-            now = datetime.datetime.now(util.UTC_TZ)
-            state = State.get(telegram_id=chat_id, description=description)
+    ChatInfo = dict
 
-            if state:
-                state.moment = now
-            else:
-                State(telegram_id=chat_id, description=description, moment=now,
-                      info={'chat': chat_name} if chat_name else None)
-        else:
-            moment = State.get_moment(chat_id, description)
-            if moment:
-                return moment.astimezone(util.UTC_TZ)
+    @orm.db_session
+    def set_state(self, state_id: str, chat_id: int, chat_info: ChatInfo):
+        try:
+            state = State[chat_id, state_id]
+            info = json_decode(state.info)
+            info.update(chat_info)
+            state.info = json_encode(info)
+        except orm.ObjectNotFound:
+            State(telegram_id=chat_id, description=state_id, info=json_encode(chat_info))
+
+    @orm.db_session
+    def get_state(self, state_id: str, chat_id: int) -> ChatInfo:
+        state = State.get(telegram_id=chat_id, description=state_id)
+        if state:
+            return json_decode(state.info)
+        return {}
 
     @orm.db_session
     def log_message(self, message, *args, **kwargs):
@@ -187,7 +200,7 @@ class Resources:
         except orm.ObjectNotFound:
             user = User(
                 telegram_id=message.from_user.id,
-                telegram_username=message.from_user.username,
+                telegram_username=message.from_user.name,
             )
         message = Message(
             sent_by=user, text=message.text, sent_at=message.date,
@@ -208,3 +221,32 @@ class Resources:
         except orm.ObjectNotFound:
             return False
         return user.is_bot_admin
+
+
+DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%f%z'
+
+
+class JSONCodec:
+    class Encoder(json.JSONEncoder):
+        def default(self, obj):
+            if isinstance(obj, datetime.datetime):
+                return {'__datetime__': obj.strftime(DATETIME_FORMAT)}
+            return super().default(obj)
+
+    class Decoder(json.JSONDecoder):
+        def __init__(self):
+            super().__init__(object_hook=self.object_hook)
+
+        @staticmethod
+        def object_hook(obj):
+            if '__datetime__' in obj:
+                return datetime.datetime.strptime(obj['__datetime__'], DATETIME_FORMAT)
+            return obj
+
+    # singleton
+    def __new__(cls, **kwargs):
+        if not hasattr(cls, 'instance'):
+            cls.instance = super().__new__(cls)
+            cls.instance.encode = cls.Encoder().encode
+            cls.instance.decode = cls.Decoder().decode
+        return cls.instance
