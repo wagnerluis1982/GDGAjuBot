@@ -33,6 +33,7 @@ find_python = re.compile(r"(?i)\bPYTHON\b").search
 commands = util.HandlerHelper()
 easter_egg = util.HandlerHelper()
 on_message = util.HandlerHelper()
+task = util.HandlerHelper(use_options=True)
 
 # Alias para reutilizar o cache como decorator
 cache = Resources.cache
@@ -92,10 +93,10 @@ class GDGAjuBot:
 
         # Configura os comandos aceitos pelo bot
         dispatcher = self.updater.dispatcher
-        for k, function in commands.functions:
+        for k, func in commands.functions:
             name = k[1:] if k[0] == '/' else k
             dispatcher.add_handler(
-                CommandHandler(name, adapt_callback(function, self)))
+                CommandHandler(name, adapt_callback(func, self)))
 
         # Configura os comandos personalizados
         if self.config.custom_responses:
@@ -110,9 +111,9 @@ class GDGAjuBot:
                 )
 
         # Configura as easter eggs
-        for search, function in easter_egg.functions:
+        for search, func in easter_egg.functions:
             dispatcher.add_handler(
-                MessageHandler(FilterSearch(search), adapt_callback(do_not_spam(function), self)))
+                MessageHandler(FilterSearch(search), adapt_callback(do_not_spam(func), self)))
 
         # Configura as funções que reagem a todas as mensagens de texto
         if on_message.functions:
@@ -132,6 +133,21 @@ class GDGAjuBot:
                 ),
                 group=1,
             )
+
+        # Configura as tasks
+        def job_callback(func):
+            return lambda bot, job: func(self)
+
+        jq = self.updater.job_queue
+        for func, options in task.functions:
+            # repeating task
+            if 'each' in options:
+                interval = options['each']
+                jq.run_repeating(job_callback(func), interval, first=interval)
+            # daily task
+            else:
+                options['time'] = options.pop('daily')
+                jq.run_daily(job_callback(func), **options)
 
     def custom_response_template(
         self, message, *args, command='', response_text=''

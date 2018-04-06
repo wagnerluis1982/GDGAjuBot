@@ -103,11 +103,14 @@ class BotConfig:
 
 
 class HandlerHelper:
-    def __init__(self):
+    def __init__(self, use_options=False):
+        self.use_options = use_options
         self.functions = []
 
-    def __call__(self, *names):
+    def __call__(self, *names, **options):
         """Decorator para anotar funções para usar como handlers do bot"""
+        assert not self.use_options or options, "Expecting keyword arguments, but none set"
+
         def decorator(func):
             @functools.wraps(func)
             def wrapped(*args, **kwargs):
@@ -124,6 +127,8 @@ class HandlerHelper:
             if names:
                 for name in names:
                     self.functions += [(name, func)]
+            elif self.use_options:
+                self.functions += [(func, options)]
             else:
                 self.functions += [func]
 
