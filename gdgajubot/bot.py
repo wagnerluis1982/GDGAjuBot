@@ -6,6 +6,7 @@ import logging
 import random
 import re
 from collections import OrderedDict
+from threading import RLock
 
 from telegram.ext import CommandHandler, Updater
 from telegram.ext.filters import BaseFilter, Filters
@@ -72,6 +73,10 @@ class GDGAjuBot:
                     lambda state: self.resources.set_state(state_id, chat_id, state)
                 )
             )
+        )
+        self.state_access = dict(
+            count=0,
+            lock=RLock()
         )
 
         # O parâmetro bot só possui valor nos casos de teste, nesse caso,
@@ -249,29 +254,18 @@ class GDGAjuBot:
 
         if 'last_time' not in state:
             state['last_time'] = datetime.datetime.now(tz=util.AJU_TZ)
-            state.dump()
-            return
+        else:
+            last = state['last_time']
+            now = datetime.datetime.now(tz=util.AJU_TZ)
+            passed = now - last
 
-        # reduce dumping state by not going ahead if last book was sent in less than 5 messages
-        if count < 5:
-            return
+            logging.info("ensure_daily_book: checking %s count=%d last=%s", message.chat.username, count, last)
 
-        last = state['last_time']
-        now = datetime.datetime.now(tz=util.AJU_TZ)
-        passed = now - last
+            # consider to send only if has passed at least 3 hours since last sent book
+            if passed.days == 0 and passed.seconds < 3 * 3600:
+                return
 
-        logging.info("ensure_daily_book: checking %s count=%d last=%s", message.chat.username, count, last)
-
-        # also keep going ahead if last book was sent in less than 3 hours ago
-        if passed.days == 0 and passed.seconds < 3 * 3600:
-            return
-
-        with state:
-            self.__daily_book(message, count, passed)
-
-    def __daily_book(self, message, count, passed):
-        # consider to send if has passed at least 5 messages since last sent book
-        if count >= 5:
+            # used to send an aware message before the book
             say = None
 
             # we should send if
@@ -284,8 +278,7 @@ class GDGAjuBot:
                     if passed.seconds >= 6 * 3600:
                         say = "Não percam o livro do dia!!!"
                     elif count >= 300:  # passed 300 messages and 3 hours or more
-                        if passed.seconds >= 3 * 3600:
-                            say = "Passou um monte de mensagens, talvez você não tenha visto o livro do dia!"
+                        say = "Passou um monte de mensagens, talvez você não tenha visto o livro do dia!"
 
             if say:
                 self.bot.send_message(message.chat_id, f'__{say}__', parse_mode="Markdown")
@@ -294,8 +287,25 @@ class GDGAjuBot:
 
     @task(each=600)
     def dump_states(self):
-        logging.info("Dumping bot states to the database")
-        self.resources.update_states(self.states)
+        access = self.state_access
+
+        with access['lock']:
+            if access['count'] == 0:
+                return
+            logging.info("Dumping bot states to the database")
+            states = super().__getattribute__('states')  # get states without changing access status
+            self.resources.update_states(states)
+            access['count'] = 0
+
+    # used to keep track of self.states access
+    def __getattribute__(self, name):
+        access = super().__getattribute__('state_access')
+
+        with access['lock']:
+            if name == 'states':
+                access['count'] += 1
+
+        return super().__getattribute__(name)
 
     @commands('/book')
     def packtpub_free_learning(self, message, now=None, reply=True):
@@ -323,9 +333,9 @@ class GDGAjuBot:
         )
 
         if has_sent:
-            with self.states['daily_book'][message.chat_id] as state:
-                state['last_time'] = now
-                state['messages_since'] = 0
+            state = self.states['daily_book'][message.chat_id]
+            state['last_time'] = now
+            state['messages_since'] = 0
 
     def __get_book(self, now=None):
         # Faz duas tentativas para obter o livro do dia, por questões de possível cache antigo.
