@@ -228,7 +228,7 @@ class MissingDict(defaultdict):
 class StateDict(dict):
     def __init__(self, data, dump_function):
         super().__init__()
-        self.dump = lambda: dump_function(self)
+        self.dump_function = dump_function
         self.update(data)
         self.contexts = 0
 
@@ -240,6 +240,9 @@ class StateDict(dict):
         self.contexts -= 1
         if self.contexts == 0:
             self.dump()
+
+    def dump(self):
+        self.dump_function(self)
 
 
 class AttributeDict(dict):
