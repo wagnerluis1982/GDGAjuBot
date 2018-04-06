@@ -292,12 +292,8 @@ class GDGAjuBot:
                 self.packtpub_free_learning(message, reply=False)
                 logging.info("ensure_daily_book: sent to %s", message.chat.username)
 
-    @on_message('.*')
-    def dump_states(self, message):
-        self.__dump_states()
-
-    @cache.cache('dump_states', expire=600)
-    def __dump_states(self):
+    @task(each=600)
+    def dump_states(self):
         logging.info("Dumping bot states to the database")
         self.resources.update_states(self.states)
 
