@@ -25,13 +25,28 @@ class FilterSearch(BaseFilter):
         return Filters.text(message) and self.f(message.text)
 
 
+class AdminFilter(BaseFilter):
+    # Filtro para identificar se o comando recebido vem de um admin
+    def __init__(self, command, resources):
+        self.command = command
+        self.resources = resources
+
+    def filter(self, message):
+        if self.resources.is_user_admin(message.from_user.id):
+            logging.info("Comando administrativo chamado: /%s", self.command)
+            return True
+        elif random.random() < 0.3:
+            message.reply_text("Você não é meu mestre para me dar ordens 😤", quote=True)
+            return False
+
+
 # Funções de busca usadas nas easter eggs
 find_ruby = re.compile(r"(?i)\bRUBY\b").search
 find_java = re.compile(r"(?i)\bJAVA\b").search
 find_python = re.compile(r"(?i)\bPYTHON\b").search
 
 # Helpers para definir os handlers do bot
-commands = util.HandlerHelper()
+commands = util.HandlerHelper(use_options=True, force_options=False)
 easter_egg = util.HandlerHelper()
 on_message = util.HandlerHelper()
 task = util.HandlerHelper(use_options=True)
@@ -98,10 +113,14 @@ class GDGAjuBot:
 
         # Configura os comandos aceitos pelo bot
         dispatcher = self.updater.dispatcher
-        for k, func in commands.functions:
+        for k, func, options in commands.functions:
             name = k[1:] if k[0] == '/' else k
-            dispatcher.add_handler(
-                CommandHandler(name, adapt_callback(func, self)))
+            handler = CommandHandler(name, adapt_callback(func, self))
+
+            if options.get('admin', False):
+                handler.filters = AdminFilter(name, self.resources)
+
+            dispatcher.add_handler(handler)
 
         # Configura os comandos personalizados
         if self.config.custom_responses:
