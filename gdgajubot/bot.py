@@ -286,7 +286,11 @@ class GDGAjuBot:
                 logging.info("ensure_daily_book: sent to %s", message.chat.username)
 
     @task(each=600)
-    def dump_states(self):
+    @commands('/dump_states')
+    def dump_states(self, message=None):
+        if message:
+            self.bot.reply_to(message, "Despejo de memória acionado com sucesso")
+
         access = self.state_access
 
         with access['lock']:
