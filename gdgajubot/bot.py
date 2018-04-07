@@ -300,7 +300,7 @@ class GDGAjuBot:
                         say = "Passou um monte de mensagens, talvez você não tenha visto o livro do dia!"
 
             if say:
-                self.bot.send_message(message.chat_id, f'__{say}__', parse_mode="Markdown")
+                self.bot.send_message(message.chat_id, f'_{say}_', parse_mode="Markdown")
                 self.packtpub_free_learning(message, reply=False)
                 logging.info("ensure_daily_book: sent to %s", message.chat.username)
 
