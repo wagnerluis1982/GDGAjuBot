@@ -482,11 +482,11 @@ class GDGAjuBot:
     def start(self):
         self.updater.start_polling(clean=True)
         logging.info("GDGAjuBot iniciado")
-        logging.info("Este é o bot do {0}".format(self.config.group_name))
+        logging.info("Este é o bot do %s", self.config.group_name)
         if self.config.debug_mode:
             logging.info("Modo do desenvolvedor ativado")
             logging.info("Usando o bot %s", self.bot.get_me().name)
             logging.info(
-                "Usando telegram_token={0}".format(self.config.telegram_token))
+                "Usando telegram_token=%s", self.config.telegram_token)
             logging.info(
-                "Usando meetup_key={0}".format(self.config.meetup_key))
+                "Usando meetup_key=%s", self.config.meetup_key)
