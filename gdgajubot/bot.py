@@ -305,7 +305,7 @@ class GDGAjuBot:
                 logging.info("ensure_daily_book: sent to %s", message.chat.username)
 
     @task(each=600)
-    @commands('/dump_states')
+    @commands('/dump_states', admin=True)
     def dump_states(self, message=None):
         if message:
             self.bot.reply_to(message, "Despejo de memória acionado com sucesso")
