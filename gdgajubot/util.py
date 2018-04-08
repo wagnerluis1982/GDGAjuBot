@@ -103,11 +103,14 @@ class BotConfig:
 
 
 class HandlerHelper:
-    def __init__(self):
+    def __init__(self, use_options=False):
+        self.use_options = use_options
         self.functions = []
 
-    def __call__(self, *names):
+    def __call__(self, *names, **options):
         """Decorator para anotar funções para usar como handlers do bot"""
+        assert not self.use_options or options, "Expecting keyword arguments, but none set"
+
         def decorator(func):
             @functools.wraps(func)
             def wrapped(*args, **kwargs):
@@ -124,6 +127,8 @@ class HandlerHelper:
             if names:
                 for name in names:
                     self.functions += [(name, func)]
+            elif self.use_options:
+                self.functions += [(func, options)]
             else:
                 self.functions += [func]
 
@@ -223,14 +228,21 @@ class MissingDict(defaultdict):
 class StateDict(dict):
     def __init__(self, data, dump_function):
         super().__init__()
-        self.dump = lambda: dump_function(self)
+        self.dump_function = dump_function
         self.update(data)
+        self.contexts = 0
 
     def __enter__(self):
+        self.contexts += 1
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.dump()
+        self.contexts -= 1
+        if self.contexts == 0:
+            self.dump()
+
+    def dump(self):
+        self.dump_function(self)
 
 
 class AttributeDict(dict):

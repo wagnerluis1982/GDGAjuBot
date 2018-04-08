@@ -6,6 +6,7 @@ import logging
 import random
 import re
 from collections import OrderedDict
+from threading import RLock
 
 from telegram.ext import CommandHandler, Updater
 from telegram.ext.filters import BaseFilter, Filters
@@ -33,6 +34,7 @@ find_python = re.compile(r"(?i)\bPYTHON\b").search
 commands = util.HandlerHelper()
 easter_egg = util.HandlerHelper()
 on_message = util.HandlerHelper()
+task = util.HandlerHelper(use_options=True)
 
 # Alias para reutilizar o cache como decorator
 cache = Resources.cache
@@ -68,9 +70,13 @@ class GDGAjuBot:
             lambda state_id: MissingDict(
                 lambda chat_id: StateDict(
                     self.resources.get_state(state_id, chat_id),
-                    lambda info: self.resources.set_state(state_id, chat_id, info)
+                    lambda state: self.resources.set_state(state_id, chat_id, state)
                 )
             )
+        )
+        self.state_access = dict(
+            count=0,
+            lock=RLock()
         )
 
         # O parâmetro bot só possui valor nos casos de teste, nesse caso,
@@ -92,10 +98,10 @@ class GDGAjuBot:
 
         # Configura os comandos aceitos pelo bot
         dispatcher = self.updater.dispatcher
-        for k, function in commands.functions:
+        for k, func in commands.functions:
             name = k[1:] if k[0] == '/' else k
             dispatcher.add_handler(
-                CommandHandler(name, adapt_callback(function, self)))
+                CommandHandler(name, adapt_callback(func, self)))
 
         # Configura os comandos personalizados
         if self.config.custom_responses:
@@ -110,9 +116,9 @@ class GDGAjuBot:
                 )
 
         # Configura as easter eggs
-        for search, function in easter_egg.functions:
+        for search, func in easter_egg.functions:
             dispatcher.add_handler(
-                MessageHandler(FilterSearch(search), adapt_callback(do_not_spam(function), self)))
+                MessageHandler(FilterSearch(search), adapt_callback(do_not_spam(func), self)))
 
         # Configura as funções que reagem a todas as mensagens de texto
         if on_message.functions:
@@ -132,6 +138,21 @@ class GDGAjuBot:
                 ),
                 group=1,
             )
+
+        # Configura as tasks
+        def job_callback(func):
+            return lambda bot, job: func(self)
+
+        jq = self.updater.job_queue
+        for func, options in task.functions:
+            # repeating task
+            if 'each' in options:
+                interval = options['each']
+                jq.run_repeating(job_callback(func), interval, first=interval)
+            # daily task
+            else:
+                options['time'] = options.pop('daily')
+                jq.run_daily(job_callback(func), **options)
 
     def custom_response_template(
         self, message, *args, command='', response_text=''
@@ -222,28 +243,30 @@ class GDGAjuBot:
 
     @on_message('.*')
     def ensure_daily_book(self, message):
-        with self.states['daily_book'][message.chat_id] as info:
-            self.__daily_book(message, info)
+        state = self.states['daily_book'][message.chat_id]
 
-    def __daily_book(self, message, info):
-        if 'chat' not in info:
-            info['chat'] = message.chat.username
+        if 'chat' not in state:
+            state['chat'] = message.chat.username
 
-        count = info.get('messages_since', 0)
+        count = state.get('messages_since', 0)
         count += 1
-        info['messages_since'] = count
+        state['messages_since'] = count
 
-        if 'last_time' not in info:
-            info['last_time'] = datetime.datetime.now(tz=util.AJU_TZ)
-
-        # consider to send if has passed at least 5 messages since last sent book
-        elif count >= 5:
-            last = info['last_time']
+        if 'last_time' not in state:
+            state['last_time'] = datetime.datetime.now(tz=util.AJU_TZ)
+        else:
+            last = state['last_time']
             now = datetime.datetime.now(tz=util.AJU_TZ)
             passed = now - last
-            say = None
 
             logging.info("ensure_daily_book: checking %s count=%d last=%s", message.chat.username, count, last)
+
+            # consider to send only if has passed at least 3 hours since last sent book
+            if passed.days == 0 and passed.seconds < 3 * 3600:
+                return
+
+            # used to send an aware message before the book
+            say = None
 
             # we should send if
             if passed.days >= 1:  # has passed 5 messages and 1 day or more since last book was sent
@@ -255,13 +278,38 @@ class GDGAjuBot:
                     if passed.seconds >= 6 * 3600:
                         say = "Não percam o livro do dia!!!"
                     elif count >= 300:  # passed 300 messages and 3 hours or more
-                        if passed.seconds >= 3 * 3600:
-                            say = "Passou um monte de mensagens, talvez você não tenha visto o livro do dia!"
+                        say = "Passou um monte de mensagens, talvez você não tenha visto o livro do dia!"
 
             if say:
                 self.bot.send_message(message.chat_id, f'__{say}__', parse_mode="Markdown")
                 self.packtpub_free_learning(message, reply=False)
                 logging.info("ensure_daily_book: sent to %s", message.chat.username)
+
+    @task(each=600)
+    @commands('/dump_states')
+    def dump_states(self, message=None):
+        if message:
+            self.bot.reply_to(message, "Despejo de memória acionado com sucesso")
+
+        access = self.state_access
+
+        with access['lock']:
+            if access['count'] == 0:
+                return
+            logging.info("Dumping bot states to the database")
+            states = super().__getattribute__('states')  # get states without changing access status
+            self.resources.update_states(states)
+            access['count'] = 0
+
+    # used to keep track of self.states access
+    def __getattribute__(self, name):
+        access = super().__getattribute__('state_access')
+
+        with access['lock']:
+            if name == 'states':
+                access['count'] += 1
+
+        return super().__getattribute__(name)
 
     @commands('/book')
     def packtpub_free_learning(self, message, now=None, reply=True):
@@ -289,9 +337,9 @@ class GDGAjuBot:
         )
 
         if has_sent:
-            with self.states['daily_book'][message.chat_id] as info:
-                info['last_time'] = now
-                info['messages_since'] = 0
+            state = self.states['daily_book'][message.chat_id]
+            state['last_time'] = now
+            state['messages_since'] = 0
 
     def __get_book(self, now=None):
         # Faz duas tentativas para obter o livro do dia, por questões de possível cache antigo.
