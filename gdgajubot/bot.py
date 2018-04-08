@@ -289,15 +289,15 @@ class GDGAjuBot:
 
             # we should send if
             if passed.days >= 1:  # has passed 5 messages and 1 day or more since last book was sent
-                say = "Faz um tempão que não me pedem o livro do dia... mas não se preocupem, eu estou aqui 😏"
+                say = "⛺ Faz um tempão que não pedem o livro do dia, que bom que estou aqui!"
             elif count >= 25:  # passed 25 messages and 12 hours or more
                 if passed.seconds >= 12 * 3600:
-                    say = "Ei, faz algum tempo que não mando o livro do dia, vou fazer agora!"
+                    say = "💂 Ei, faz um tempo que mandei o livro do dia. Vou fazer agora!"
                 elif count >= 100:  # passed 100 messages and 6 hours or more
                     if passed.seconds >= 6 * 3600:
-                        say = "Não percam o livro do dia!!!"
+                        say = "☕ Não percam o livro do dia!!!"
                     elif count >= 300:  # passed 300 messages and 3 hours or more
-                        say = "Passou um monte de mensagens, talvez você não tenha visto o livro do dia!"
+                        say = "🏇 Passou um monte de mensagens, será que todos viram o livro do dia?"
 
             if say:
                 self.bot.send_message(message.chat_id, f'_{say}_', parse_mode="Markdown")
