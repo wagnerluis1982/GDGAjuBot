@@ -186,6 +186,9 @@ class TimeZone:
         def dst(self, dt):
             return self.ZERO
 
+        def __repr__(self):
+            return self._tzname
+
     # cache de fusos horários
     timezones = {}
 
