@@ -269,6 +269,11 @@ class GDGAjuBot:
         self.resources.log_message(message, *args, **kwargs)
 
     @on_message('.*')
+    def chat_statistics(self, message):
+        stats = self.get_state('chat_stats', message.chat_id)
+        stats['last_activity'] = datetime.datetime.now(util.AJU_TZ)
+
+    @on_message('.*')
     def ensure_daily_book(self, message):
         state = self.get_state('daily_book', message.chat_id)
 
