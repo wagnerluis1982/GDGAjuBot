@@ -306,7 +306,7 @@ class GDGAjuBot:
 
             if say:
                 self.bot.send_message(message.chat_id, f'_{say}_', parse_mode="Markdown")
-                self.packtpub_free_learning(message, reply=False)
+                self.packtpub_free_learning(message, now, reply=False)
                 logging.info("ensure_daily_book: sent to %s", message.chat.username)
 
     @task(each=600)
@@ -365,15 +365,12 @@ class GDGAjuBot:
             state['last_time'] = now
             state['messages_since'] = 0
 
-    def __get_book(self, now=None):
+    def __get_book(self, now):
         # Faz duas tentativas para obter o livro do dia, por questões de possível cache antigo.
         for _ in range(2):
             book = self.resources.get_packt_free_book()
             if book is None:
                 continue
-
-            if now is None:
-                now = datetime.datetime.now(tz=util.AJU_TZ)
 
             delta = datetime.datetime.fromtimestamp(book.expires, tz=util.AJU_TZ) - now
             delta = delta.total_seconds()
