@@ -179,6 +179,14 @@ class GDGAjuBot:
         logging.info(command)
         self.bot.reply_to(message, response_text)
 
+    def get_state(self, state_id, chat_id):
+        state = self.states[state_id][chat_id]
+
+        if 'chat' not in state:
+            state['chat'] = self.bot.get_chat(chat_id).username
+
+        return state
+
     @commands('/start')
     def send_welcome(self, message):
         """Mensagem de apresentação do bot."""
@@ -262,10 +270,7 @@ class GDGAjuBot:
 
     @on_message('.*')
     def ensure_daily_book(self, message):
-        state = self.states['daily_book'][message.chat_id]
-
-        if 'chat' not in state:
-            state['chat'] = message.chat.username
+        state = self.get_state('daily_book', message.chat_id)
 
         count = state.get('messages_since', 0)
         count += 1
@@ -356,7 +361,7 @@ class GDGAjuBot:
         )
 
         if has_sent:
-            state = self.states['daily_book'][message.chat_id]
+            state = self.get_state('daily_book', message.chat_id)
             state['last_time'] = now
             state['messages_since'] = 0
 
