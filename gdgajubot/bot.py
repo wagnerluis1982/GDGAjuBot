@@ -182,6 +182,10 @@ class GDGAjuBot:
     def get_state(self, state_id, chat_id):
         state = self.states[state_id][chat_id]
 
+        # reserve a memory-only key
+        if '__memory__' not in state:
+            state['__memory__'] = {}
+
         if 'chat' not in state:
             state['chat'] = self.bot.get_chat(chat_id).username
 
