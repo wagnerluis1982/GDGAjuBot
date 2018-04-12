@@ -351,6 +351,17 @@ class GDGAjuBot:
 
             schedule_job(next_time)  # reschedule a new job
 
+    @task(each=3600)
+    def clear_stale_states(self):
+        logging.info("Clearing stale chats states")
+        self.dump_states()
+
+        now = datetime.datetime.now(util.AJU_TZ)
+        for chat_id, stats in self.states['chat_stats'].items():
+            if (now - stats['last_activity']).days >= 1:
+                for states in self.states.values():
+                    del states[chat_id]
+
     @task(each=600)
     @commands('/dump_states', admin=True)
     def dump_states(self, message=None):
