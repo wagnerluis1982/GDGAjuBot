@@ -278,24 +278,54 @@ class GDGAjuBot:
         stats['last_activity'] = datetime.datetime.now(util.AJU_TZ)
 
     @on_message('.*')
-    def ensure_daily_book(self, message):
+    def ensure_daily_book(self, message, as_job=False):
         state = self.get_state('daily_book', message.chat_id)
+        my = state['__memory__']
 
-        count = state.get('messages_since', 0)
-        count += 1
-        state['messages_since'] = count
+        schedule_job = my.get('schedule_fn')
+        if schedule_job is None:
+            cb = lambda bot, job, msg=message: self.ensure_daily_book(msg, as_job=True)
 
+            def schedule_job(seconds, to_log=True, job_callback=cb):
+                self.updater.job_queue.run_once(job_callback, when=seconds)
+                if to_log:
+                    logging.info("ensure_daily_book: scheduled to %d hours from now", seconds // 3600)
+
+            my['schedule_fn'] = schedule_job
+
+        if not as_job:
+            count = state.get('messages_since', 0)
+            count += 1
+            state['messages_since'] = count
+
+            logging.info("ensure_daily_book: %s count=%d last=%s", message.chat.username, count, state['last_time'])
+
+            has_job = my.get('has_job', False)
+            if not has_job:
+                my['has_job'] = True
+                schedule_job(60, to_log=False)
+
+            # the rest of the function is executed when called as a job
+            return
+
+        # that is first message coming from this chat_id: reschedule a job to 3 hours from now
         if 'last_time' not in state:
             state['last_time'] = datetime.datetime.now(tz=util.AJU_TZ)
+            schedule_job(3 * 3600)
+
+        # otherwise: make checks to send the book
         else:
+            count = state['messages_since']
             last = state['last_time']
             now = datetime.datetime.now(tz=util.AJU_TZ)
             passed = now - last
 
-            logging.info("ensure_daily_book: checking %s count=%d last=%s", message.chat.username, count, last)
+            # how many hours between 3 and 23 in the future to check the book again
+            next_time = random.randint(3, 23) * 3600
 
             # consider to send only if has passed at least 3 hours since last sent book
             if passed.days == 0 and passed.seconds < 3 * 3600:
+                schedule_job(next_time)  # reschedule a new job
                 return
 
             # used to send an aware message before the book
@@ -313,10 +343,13 @@ class GDGAjuBot:
                     elif count >= 300:  # passed 300 messages and 3 hours or more
                         say = "🏇 Passou um monte de mensagens, será que todos viram o livro do dia?"
 
+            # book should be sent now
             if say:
                 self.bot.send_message(message.chat_id, f'_{say}_', parse_mode="Markdown")
                 self.packtpub_free_learning(message, now, reply=False)
                 logging.info("ensure_daily_book: sent to %s", message.chat.username)
+
+            schedule_job(next_time)  # reschedule a new job
 
     @task(each=600)
     @commands('/dump_states', admin=True)
