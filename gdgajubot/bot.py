@@ -32,10 +32,15 @@ class AdminFilter(BaseFilter):
         self.resources = resources
 
     def filter(self, message):
+        is_match = re.match(r'^/%s(?:\s|$)' % self.command, message.text)
+
+        if not is_match:
+            return False
+
         if self.resources.is_user_admin(message.from_user.id):
             logging.info("Comando administrativo chamado: /%s", self.command)
             return True
-        elif random.random() < 0.3:
+        else:
             message.reply_text("Você não é meu mestre para me dar ordens 😤", quote=True)
             return False
 
