@@ -118,21 +118,17 @@ class HandlerHelper:
                 return func(*args, **kwargs)
 
             if self.functions:
-                message = "Cannot mix commands and non-command annotations"
                 last = self.functions[-1]
                 if names:
-                    assert isinstance(last, tuple), message
+                    assert callable(last[1]), "This decorator should be called with *args"
                 elif self.use_options:
-                    assert callable(last[0]), message
+                    assert callable(last[0]), "This decorator should be called with **kwargs"
                 else:
-                    assert callable(last), message
+                    assert callable(last), "This decorator should be called with no arguments"
 
             if names:
                 for name in names:
-                    if self.use_options:
-                        self.functions += [(name, func, options)]
-                    else:
-                        self.functions += [(name, func)]
+                    self.functions += [(name, func, options)] if self.use_options else [(name, func)]
             elif self.use_options:
                 self.functions += [(func, options)]
             else:

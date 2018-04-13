@@ -305,8 +305,7 @@ class GDGAjuBot:
 
             logging.info("ensure_daily_book: %s count=%d last=%s", message.chat.username, count, state['last_time'])
 
-            has_job = my.get('has_job', False)
-            if not has_job:
+            if 'has_job' not in my:
                 my['has_job'] = True
                 schedule_job(60, to_log=False)
 
