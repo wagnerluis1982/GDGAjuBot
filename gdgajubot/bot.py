@@ -356,7 +356,7 @@ class GDGAjuBot:
 
             schedule_job(next_time)  # reschedule a new job
 
-    @task(each=3600)
+    @task(daily=datetime.time(0, 0))
     def clear_stale_states(self):
         logging.info("Clearing stale chats states")
         self.dump_states()
