@@ -25,13 +25,33 @@ class FilterSearch(BaseFilter):
         return Filters.text(message) and self.f(message.text)
 
 
+class AdminFilter(BaseFilter):
+    # Filtro para identificar se o comando recebido vem de um admin
+    def __init__(self, command, resources):
+        self.command = command
+        self.resources = resources
+
+    def filter(self, message):
+        is_match = re.match(r'^/%s(?:\s|$)' % self.command, message.text)
+
+        if not is_match:
+            return False
+
+        if self.resources.is_user_admin(message.from_user.id):
+            logging.info("Comando administrativo chamado: /%s", self.command)
+            return True
+        else:
+            message.reply_text("Você não é meu mestre para me dar ordens 😤", quote=True)
+            return False
+
+
 # Funções de busca usadas nas easter eggs
 find_ruby = re.compile(r"(?i)\bRUBY\b").search
 find_java = re.compile(r"(?i)\bJAVA\b").search
 find_python = re.compile(r"(?i)\bPYTHON\b").search
 
 # Helpers para definir os handlers do bot
-commands = util.HandlerHelper()
+commands = util.HandlerHelper(use_options=True, force_options=False)
 easter_egg = util.HandlerHelper()
 on_message = util.HandlerHelper()
 task = util.HandlerHelper(use_options=True)
@@ -98,10 +118,14 @@ class GDGAjuBot:
 
         # Configura os comandos aceitos pelo bot
         dispatcher = self.updater.dispatcher
-        for k, func in commands.functions:
+        for k, func, options in commands.functions:
             name = k[1:] if k[0] == '/' else k
-            dispatcher.add_handler(
-                CommandHandler(name, adapt_callback(func, self)))
+            handler = CommandHandler(name, adapt_callback(func, self))
+
+            if options.get('admin', False):
+                handler.filters = AdminFilter(name, self.resources)
+
+            dispatcher.add_handler(handler)
 
         # Configura os comandos personalizados
         if self.config.custom_responses:
@@ -159,6 +183,18 @@ class GDGAjuBot:
     ):
         logging.info(command)
         self.bot.reply_to(message, response_text)
+
+    def get_state(self, state_id, chat_id):
+        state = self.states[state_id][chat_id]
+
+        # reserve a memory-only key
+        if '__memory__' not in state:
+            state['__memory__'] = {}
+
+        if 'chat' not in state:
+            state['chat'] = self.bot.get_chat(chat_id).username
+
+        return state
 
     @commands('/start')
     def send_welcome(self, message):
@@ -242,27 +278,58 @@ class GDGAjuBot:
         self.resources.log_message(message, *args, **kwargs)
 
     @on_message('.*')
-    def ensure_daily_book(self, message):
-        state = self.states['daily_book'][message.chat_id]
+    def chat_statistics(self, message):
+        stats = self.get_state('chat_stats', message.chat_id)
+        stats['last_activity'] = datetime.datetime.now(util.AJU_TZ)
 
-        if 'chat' not in state:
-            state['chat'] = message.chat.username
+    @on_message('.*')
+    def ensure_daily_book(self, message, as_job=False):
+        state = self.get_state('daily_book', message.chat_id)
+        my = state['__memory__']
 
-        count = state.get('messages_since', 0)
-        count += 1
-        state['messages_since'] = count
+        schedule_job = my.get('schedule_fn')
+        if schedule_job is None:
+            cb = lambda bot, job, msg=message: self.ensure_daily_book(msg, as_job=True)
 
+            def schedule_job(seconds, to_log=True, job_callback=cb):
+                self.updater.job_queue.run_once(job_callback, when=seconds)
+                if to_log:
+                    logging.info("ensure_daily_book: scheduled to %d hours from now", seconds // 3600)
+
+            my['schedule_fn'] = schedule_job
+
+        if not as_job:
+            count = state.get('messages_since', 0)
+            count += 1
+            state['messages_since'] = count
+
+            logging.info("ensure_daily_book: %s count=%d last=%s", message.chat.username, count, state['last_time'])
+
+            if 'has_job' not in my:
+                my['has_job'] = True
+                schedule_job(60, to_log=False)
+
+            # the rest of the function is executed when called as a job
+            return
+
+        # that is first message coming from this chat_id: reschedule a job to 3 hours from now
         if 'last_time' not in state:
             state['last_time'] = datetime.datetime.now(tz=util.AJU_TZ)
+            schedule_job(3 * 3600)
+
+        # otherwise: make checks to send the book
         else:
+            count = state['messages_since']
             last = state['last_time']
             now = datetime.datetime.now(tz=util.AJU_TZ)
             passed = now - last
 
-            logging.info("ensure_daily_book: checking %s count=%d last=%s", message.chat.username, count, last)
+            # how many hours between 3 and 23 in the future to check the book again
+            next_time = random.randint(3, 23) * 3600
 
             # consider to send only if has passed at least 3 hours since last sent book
             if passed.days == 0 and passed.seconds < 3 * 3600:
+                schedule_job(next_time)  # reschedule a new job
                 return
 
             # used to send an aware message before the book
@@ -270,23 +337,37 @@ class GDGAjuBot:
 
             # we should send if
             if passed.days >= 1:  # has passed 5 messages and 1 day or more since last book was sent
-                say = "Faz um tempão que não me pedem o livro do dia... mas não se preocupem, eu estou aqui 😏"
+                say = "⛺ Faz um tempão que não pedem o livro do dia, que bom que estou aqui!"
             elif count >= 25:  # passed 25 messages and 12 hours or more
                 if passed.seconds >= 12 * 3600:
-                    say = "Ei, faz algum tempo que não mando o livro do dia, vou fazer agora!"
+                    say = "💂 Ei, faz um tempo que mandei o livro do dia. Vou fazer agora!"
                 elif count >= 100:  # passed 100 messages and 6 hours or more
                     if passed.seconds >= 6 * 3600:
-                        say = "Não percam o livro do dia!!!"
+                        say = "☕ Não percam o livro do dia!!!"
                     elif count >= 300:  # passed 300 messages and 3 hours or more
-                        say = "Passou um monte de mensagens, talvez você não tenha visto o livro do dia!"
+                        say = "🏇 Passou um monte de mensagens, será que todos viram o livro do dia?"
 
+            # book should be sent now
             if say:
-                self.bot.send_message(message.chat_id, f'__{say}__', parse_mode="Markdown")
-                self.packtpub_free_learning(message, reply=False)
+                self.bot.send_message(message.chat_id, f'_{say}_', parse_mode="Markdown")
+                self.packtpub_free_learning(message, now, reply=False)
                 logging.info("ensure_daily_book: sent to %s", message.chat.username)
 
+            schedule_job(next_time)  # reschedule a new job
+
+    @task(daily=datetime.time(0, 0))
+    def clear_stale_states(self):
+        logging.info("Clearing stale chats states")
+        self.dump_states()
+
+        now = datetime.datetime.now(util.AJU_TZ)
+        for chat_id, stats in self.states['chat_stats'].items():
+            if (now - stats['last_activity']).days >= 1:
+                for states in self.states.values():
+                    del states[chat_id]
+
     @task(each=600)
-    @commands('/dump_states')
+    @commands('/dump_states', admin=True)
     def dump_states(self, message=None):
         if message:
             self.bot.reply_to(message, "Despejo de memória acionado com sucesso")
@@ -337,19 +418,16 @@ class GDGAjuBot:
         )
 
         if has_sent:
-            state = self.states['daily_book'][message.chat_id]
+            state = self.get_state('daily_book', message.chat_id)
             state['last_time'] = now
             state['messages_since'] = 0
 
-    def __get_book(self, now=None):
+    def __get_book(self, now):
         # Faz duas tentativas para obter o livro do dia, por questões de possível cache antigo.
         for _ in range(2):
             book = self.resources.get_packt_free_book()
             if book is None:
                 continue
-
-            if now is None:
-                now = datetime.datetime.now(tz=util.AJU_TZ)
 
             delta = datetime.datetime.fromtimestamp(book.expires, tz=util.AJU_TZ) - now
             delta = delta.total_seconds()
@@ -463,11 +541,11 @@ class GDGAjuBot:
     def start(self):
         self.updater.start_polling(clean=True)
         logging.info("GDGAjuBot iniciado")
-        logging.info("Este é o bot do {0}".format(self.config.group_name))
+        logging.info("Este é o bot do %s", self.config.group_name)
         if self.config.debug_mode:
             logging.info("Modo do desenvolvedor ativado")
             logging.info("Usando o bot %s", self.bot.get_me().name)
             logging.info(
-                "Usando telegram_token={0}".format(self.config.telegram_token))
+                "Usando telegram_token=%s", self.config.telegram_token)
             logging.info(
-                "Usando meetup_key={0}".format(self.config.meetup_key))
+                "Usando meetup_key=%s", self.config.meetup_key)

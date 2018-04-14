@@ -103,13 +103,14 @@ class BotConfig:
 
 
 class HandlerHelper:
-    def __init__(self, use_options=False):
+    def __init__(self, use_options=False, force_options=True):
         self.use_options = use_options
+        self.force_options = force_options
         self.functions = []
 
     def __call__(self, *names, **options):
         """Decorator para anotar funções para usar como handlers do bot"""
-        assert not self.use_options or options, "Expecting keyword arguments, but none set"
+        assert not self.use_options or not self.force_options or options, "Expecting keyword arguments, but none set"
 
         def decorator(func):
             @functools.wraps(func)
@@ -117,16 +118,17 @@ class HandlerHelper:
                 return func(*args, **kwargs)
 
             if self.functions:
-                message = "Cannot mix commands and non-command annotations"
                 last = self.functions[-1]
                 if names:
-                    assert isinstance(last, tuple), message
+                    assert callable(last[1]), "This decorator should be called with *args"
+                elif self.use_options:
+                    assert callable(last[0]), "This decorator should be called with **kwargs"
                 else:
-                    assert callable(last), message
+                    assert callable(last), "This decorator should be called with no arguments"
 
             if names:
                 for name in names:
-                    self.functions += [(name, func)]
+                    self.functions += [(name, func, options)] if self.use_options else [(name, func)]
             elif self.use_options:
                 self.functions += [(func, options)]
             else:
@@ -179,6 +181,9 @@ class TimeZone:
 
         def dst(self, dt):
             return self.ZERO
+
+        def __repr__(self):
+            return self._tzname
 
     # cache de fusos horários
     timezones = {}
