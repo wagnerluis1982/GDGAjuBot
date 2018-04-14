@@ -2,6 +2,7 @@
 """Bot do GDG-Aracaju."""
 import datetime
 import functools
+import itertools
 import logging
 import random
 import re
@@ -365,10 +366,14 @@ class GDGAjuBot:
         self.dump_states()
 
         now = datetime.datetime.now(util.AJU_TZ)
+        staled_chats = []
+
         for chat_id, stats in self.states['chat_stats'].items():
-            if (now - stats['last_activity']).days >= 1:
-                for states in self.states.values():
-                    del states[chat_id]
+            if 'last_activity' not in stats or (now - stats['last_activity']).days >= 1:
+                staled_chats.append(chat_id)
+
+        for chat_id, states in itertools.product(staled_chats, self.states.values()):
+            del states[chat_id]
 
     @task(each=600)
     @commands('/dump_states', admin=True)
