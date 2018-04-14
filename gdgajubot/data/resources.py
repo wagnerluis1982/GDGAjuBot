@@ -12,6 +12,7 @@ from bs4 import BeautifulSoup
 
 from gdgajubot import util
 from gdgajubot.data.database import db, orm, Message, User, Choice, ChoiceConverter, State
+from gdgajubot.util import StateDict, MissingDict
 
 
 def json_encode(info):
@@ -199,6 +200,26 @@ class Resources:
         for state_id, data in states.items():
             for chat_id, chat_state in data.items():
                 self.set_state(state_id, chat_id, chat_state)
+
+    @orm.db_session
+    def load_states(self) -> Dict[str, Dict[int, ChatState]]:
+        states = MissingDict(
+            lambda state_id: MissingDict(
+                lambda chat_id: self.__state_dict(state_id, chat_id,
+                                                  self.get_state(state_id, chat_id))
+            )
+        )
+
+        for state in State.select():
+            state_id, chat_id, info = state.description, state.telegram_id, state.info
+            states[state_id][chat_id] = self.__state_dict(state_id, chat_id, json_decode(info))
+
+        return states
+
+    def __state_dict(self, state_id, chat_id, data):
+        return StateDict(
+            data, dump_function=lambda state: self.set_state(state_id, chat_id, state)
+        )
 
     @orm.db_session
     def log_message(self, message, *args, **kwargs):

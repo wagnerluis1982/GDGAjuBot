@@ -14,7 +14,7 @@ from telegram.ext.filters import BaseFilter, Filters
 from telegram.ext.messagehandler import MessageHandler
 
 from gdgajubot.data.resources import Resources
-from gdgajubot.util import do_not_spam, MissingDict, StateDict
+from gdgajubot.util import do_not_spam
 from gdgajubot import util
 
 
@@ -87,18 +87,12 @@ class GDGAjuBot:
     def __init__(self, config, bot=None, resources=None):
         self.config = config
         self.resources = resources if resources else Resources(config)
-        self.states = MissingDict(
-            lambda state_id: MissingDict(
-                lambda chat_id: StateDict(
-                    self.resources.get_state(state_id, chat_id),
-                    lambda state: self.resources.set_state(state_id, chat_id, state)
-                )
-            )
-        )
         self.state_access = dict(
             count=0,
             lock=RLock()
         )
+        self.states = self.resources.load_states()
+        self.clear_stale_states(as_task=False)
 
         # O parâmetro bot só possui valor nos casos de teste, nesse caso,
         # encerra o __init__ aqui para não haver conexão ao Telegram.
@@ -359,11 +353,11 @@ class GDGAjuBot:
                 hours = passed.seconds // 3600
                 schedule_job(between(1, 24 - hours))  # reschedule a job to a fair time
 
-
     @task(daily=datetime.time(0, 0))
-    def clear_stale_states(self):
-        logging.info("Clearing stale chats states")
-        self.dump_states()
+    def clear_stale_states(self, as_task=True):
+        if as_task:
+            logging.info("Clearing stale chats states")
+            self.dump_states()
 
         now = datetime.datetime.now(util.AJU_TZ)
         staled_chats = []
