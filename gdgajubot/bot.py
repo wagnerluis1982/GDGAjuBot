@@ -324,19 +324,20 @@ class GDGAjuBot:
             now = datetime.datetime.now(tz=util.AJU_TZ)
             passed = now - last
 
-            # how many hours between 3 and 23 in the future to check the book again
-            next_time = random.randint(3, 23) * 3600
+            # how many hours in an interval to check the book again
+            def between(h1, h2):
+                return random.randint(h1, h2) * 3600
 
             # consider to send only if has passed at least 3 hours since last sent book
             if passed.days == 0 and passed.seconds < 3 * 3600:
-                schedule_job(next_time)  # reschedule a new job
+                schedule_job(between(3, 12))  # reschedule a job to some hours from now
                 return
 
             # used to send an aware message before the book
             say = None
 
             # we should send if
-            if passed.days >= 1:  # has passed 5 messages and 1 day or more since last book was sent
+            if passed.days >= 1:  # has passed 1 day or more since last book was sent
                 say = "⛺ Faz um tempão que não pedem o livro do dia, que bom que estou aqui!"
             elif count >= 25:  # passed 25 messages and 12 hours or more
                 if passed.seconds >= 12 * 3600:
@@ -352,8 +353,11 @@ class GDGAjuBot:
                 self.bot.send_message(message.chat_id, f'_{say}_', parse_mode="Markdown")
                 self.packtpub_free_learning(message, now, reply=False)
                 logging.info("ensure_daily_book: sent to %s", message.chat.username)
+                schedule_job(between(12, 24))  # reschedule a job to a bunch of hours from now
+            else:
+                hours = passed.seconds // 3600
+                schedule_job(between(1, 24 - hours))  # reschedule a job to a fair time
 
-            schedule_job(next_time)  # reschedule a new job
 
     @task(daily=datetime.time(0, 0))
     def clear_stale_states(self):
