@@ -300,10 +300,10 @@ class GDGAjuBot:
         if schedule_job is None:
             cb = lambda bot, job, msg=message: self.ensure_daily_book(msg, as_job=True)
 
-            def schedule_job(seconds, to_log=True, job_callback=cb):
+            def schedule_job(seconds, to_log=True, job_callback=cb, chat_name=message.chat.username):
                 self.updater.job_queue.run_once(job_callback, when=seconds)
                 if to_log:
-                    logging.info("ensure_daily_book: scheduled to %d hours from now", seconds // 3600)
+                    logging.info("ensure_daily_book: %s scheduled to %d hours from now", chat_name, seconds // 3600)
 
             my['schedule_fn'] = schedule_job
 
