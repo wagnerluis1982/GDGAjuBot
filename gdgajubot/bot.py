@@ -166,8 +166,12 @@ class GDGAjuBot:
         for func, options in task.functions:
             # repeating task
             if 'each' in options:
-                interval = options['each']
-                jq.run_repeating(job_callback(func), interval, first=interval)
+                options['interval'] = options.pop('each')
+                jq.run_repeating(job_callback(func), **options)
+            # one time task
+            elif 'once' in options:
+                options['when'] = options.pop('once')
+                jq.run_once(job_callback(func), **options)
             # daily task
             else:
                 options['time'] = options.pop('daily')
