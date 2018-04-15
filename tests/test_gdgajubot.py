@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import unittest
 import os
+from collections import defaultdict
 from datetime import datetime
 from unittest import mock
 
@@ -14,62 +15,53 @@ AJU_TZ = util.AJU_TZ
 MockTeleBot = mock.NonCallableMock
 MockMessage = mock.NonCallableMock
 
-
-class MockResources:
-    def __init__(self, book=None):
-        # Falso cache de eventos
-        self.cache_events = [
-            {'link': 'http://www.meetup.com/GDG-Aracaju/events/229313880/',
-             'name': 'Hackeando sua Carreira #Hangout',
-             'time': datetime.fromtimestamp(1459378800, AJU_TZ)},
-            {'link': 'http://www.meetup.com/GDG-Aracaju/events/229623381/',
-             'name': 'Android Jam 2: Talks Dia 2',
-             'time': datetime.fromtimestamp(1459612800, AJU_TZ)},
-            {'link': 'http://www.meetup.com/GDG-Aracaju/events/mwnsrlyvgbjb/',
-             'name': 'Coding Dojo',
-             'time': datetime.fromtimestamp(1459980000, AJU_TZ)},
-            {'link': 'http://www.meetup.com/GDG-Aracaju/events/229591464/',
-             'name': 'O Caminho para uma Arquitetura Elegante #Hangout',
-             'time': datetime.fromtimestamp(1460160000, AJU_TZ)},
-            {'link': 'http://www.meetup.com/GDG-Aracaju/events/229770309/',
-             'name': 'Android Jam 2: #Curso Dia 2',
-             'time': datetime.fromtimestamp(1460217600, AJU_TZ)},
-            {'link': 'http://www.meetup.com/GDG-Aracaju/events/mwnsrlyvhbgb/',
-             'name': 'Coding Dojo',
-             'time': datetime.fromtimestamp(1462399200, AJU_TZ)},
-            {'link': 'http://www.meetup.com/GDG-Aracaju/events/229951204/',
-             'name': 'Google I/O Extended',
-             'time': datetime.fromtimestamp(1463587200, AJU_TZ)},
-            {'link': 'http://www.meetup.com/GDG-Aracaju/events/229951264/',
-             'name': 'Google IO Extended 2016',
-             'time': datetime.fromtimestamp(1463608800, AJU_TZ)},
-        ]
+class MockResources(mock.NonCallableMock):
+    def __init__(self, book=True, **kwargs):
+        super().__init__(**kwargs)
 
         if book is False:
-            self.book = None
+            self.BOOK = None
 
-    def get_events(self, n):
-        return self.cache_events[:n]
+        self.configure_mock(**{
+            'get_events.side_effect': lambda n: self.EVENTS[:n],
+            'get_packt_free_book.return_value': self.BOOK,
+            'get_short_url.side_effect': lambda url: url,
+            'load_states.return_value': defaultdict(lambda: defaultdict(dict)),
+        })
 
-    # Valor fixo para get_packt_free_book
-    book = util.AttributeDict(
+    EVENTS = [
+        {'link': 'http://www.meetup.com/GDG-Aracaju/events/229313880/',
+         'name': 'Hackeando sua Carreira #Hangout',
+         'time': datetime.fromtimestamp(1459378800, AJU_TZ)},
+        {'link': 'http://www.meetup.com/GDG-Aracaju/events/229623381/',
+         'name': 'Android Jam 2: Talks Dia 2',
+         'time': datetime.fromtimestamp(1459612800, AJU_TZ)},
+        {'link': 'http://www.meetup.com/GDG-Aracaju/events/mwnsrlyvgbjb/',
+         'name': 'Coding Dojo',
+         'time': datetime.fromtimestamp(1459980000, AJU_TZ)},
+        {'link': 'http://www.meetup.com/GDG-Aracaju/events/229591464/',
+         'name': 'O Caminho para uma Arquitetura Elegante #Hangout',
+         'time': datetime.fromtimestamp(1460160000, AJU_TZ)},
+        {'link': 'http://www.meetup.com/GDG-Aracaju/events/229770309/',
+         'name': 'Android Jam 2: #Curso Dia 2',
+         'time': datetime.fromtimestamp(1460217600, AJU_TZ)},
+        {'link': 'http://www.meetup.com/GDG-Aracaju/events/mwnsrlyvhbgb/',
+         'name': 'Coding Dojo',
+         'time': datetime.fromtimestamp(1462399200, AJU_TZ)},
+        {'link': 'http://www.meetup.com/GDG-Aracaju/events/229951204/',
+         'name': 'Google I/O Extended',
+         'time': datetime.fromtimestamp(1463587200, AJU_TZ)},
+        {'link': 'http://www.meetup.com/GDG-Aracaju/events/229951264/',
+         'name': 'Google IO Extended 2016',
+         'time': datetime.fromtimestamp(1463608800, AJU_TZ)},
+    ]
+
+    BOOK = util.AttributeDict(
         name="Android 2099",
         summary="Good practices with Miguel O’Hara",
         cover='//test.jpg',
         expires=4091565600,
     )
-
-    def get_packt_free_book(self):
-        return self.book
-
-    def get_short_url(self, long_url):
-        return long_url
-
-    def set_state(self, state_id, chat_id, chat_state):
-        pass
-
-    def get_state(self, state_id, chat_id):
-        return {}
 
 
 class TestGDGAjuBot(unittest.TestCase):
@@ -125,7 +117,7 @@ class TestGDGAjuBot(unittest.TestCase):
     def test_packtpub_free_learning(self):
         bot, resources, message = MockTeleBot(), MockResources(), MockMessage()
         g_bot = GDGAjuBot(self.config, bot, resources)
-        ts = resources.book.expires
+        ts = resources.BOOK.expires
 
         # Sem warning
         g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(ts - 10*3600, tz=AJU_TZ))
@@ -158,7 +150,7 @@ class TestGDGAjuBot(unittest.TestCase):
         bot.send_message.assert_called_with(message.chat_id, r, parse_mode="Markdown",
                                             disable_web_page_preview=True, reply_to_message_id=message.message_id)
 
-        resources.book = MockResources.book
+        resources.book = MockResources.BOOK
         g_bot.packtpub_free_learning(message, now=datetime.fromtimestamp(resources.book.expires + 1, tz=AJU_TZ))
         bot.send_message.assert_called_with(message.chat_id, r, parse_mode="Markdown",
                                             disable_web_page_preview=True, reply_to_message_id=message.message_id)
