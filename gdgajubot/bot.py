@@ -9,6 +9,7 @@ import re
 from collections import OrderedDict
 from threading import RLock
 
+import telegram
 from telegram.ext import CommandHandler, Updater
 from telegram.ext.filters import BaseFilter, Filters
 from telegram.ext.messagehandler import MessageHandler
@@ -281,8 +282,17 @@ class GDGAjuBot:
         stats = self.get_state('chat_stats', message.chat_id)
         stats['last_activity'] = datetime.datetime.now(util.AJU_TZ)
 
+    @task(once=60)
     @on_message('.*')
-    def ensure_daily_book(self, message, as_job=False):
+    def ensure_daily_book(self, message=None, as_job=False):
+        # without message, it restarts the function for each chat state!
+        if not message:
+            if len(self.states['daily_book']) > 0:
+                new_message = functools.partial(telegram.Message, 0, self.bot.get_me(), datetime.datetime.now())
+                for chat_id, state in self.states['daily_book'].items():
+                    self.ensure_daily_book(new_message(self.bot.get_chat(chat_id)), as_job=True)
+            return
+
         state = self.get_state('daily_book', message.chat_id)
         my = state['__memory__']
 
@@ -297,16 +307,19 @@ class GDGAjuBot:
 
             my['schedule_fn'] = schedule_job
 
+            # there is no daily book job yet: schedule it now!
+            schedule_job(60, to_log=False)
+
+            # means this call was a dispatching
+            if as_job:
+                return
+
         if not as_job:
             count = state.get('messages_since', 0)
             count += 1
             state['messages_since'] = count
 
             logging.info("ensure_daily_book: %s count=%d last=%s", message.chat.username, count, state['last_time'])
-
-            if 'has_job' not in my:
-                my['has_job'] = True
-                schedule_job(60, to_log=False)
 
             # the rest of the function is executed when called as a job
             return
