@@ -377,14 +377,24 @@ class GDGAjuBot:
             self.dump_states()
 
         now = datetime.datetime.now(util.AJU_TZ)
-        staled_chats = []
+        all_stats = self.states['chat_stats']
+        staled_chats = set()
 
-        for chat_id, stats in self.states['chat_stats'].items():
-            if 'last_activity' not in stats or (now - stats['last_activity']).days >= 1:
-                staled_chats.append(chat_id)
+        for state_id, chat_states in self.states.items():
+            for chat_id in chat_states:
+                if chat_id in staled_chats:
+                    continue
+
+                if chat_id not in all_stats:
+                    staled_chats.add(chat_id)
+                    continue
+
+                stats = all_stats[chat_id]
+                if 'last_activity' not in stats or (now - stats['last_activity']).days >= 1:
+                    staled_chats.add(chat_id)
 
         for chat_id, states in itertools.product(staled_chats, self.states.values()):
-            del states[chat_id]
+            states.pop(chat_id, None)
 
     @task(each=600)
     @commands('/dump_states', admin=True)
