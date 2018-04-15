@@ -441,6 +441,7 @@ class GDGAjuBot:
             state = self.get_state('daily_book', message.chat_id)
             state['last_time'] = now
             state['messages_since'] = 0
+            state.dump()
 
     def __get_book(self, now):
         # Faz duas tentativas para obter o livro do dia, por questões de possível cache antigo.

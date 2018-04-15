@@ -26,7 +26,11 @@ class MockResources(mock.NonCallableMock):
             'get_events.side_effect': lambda n: self.EVENTS[:n],
             'get_packt_free_book.return_value': self.BOOK,
             'get_short_url.side_effect': lambda url: url,
-            'load_states.return_value': defaultdict(lambda: defaultdict(dict)),
+            'load_states.return_value': defaultdict(
+                lambda: defaultdict(
+                    lambda: util.StateDict({}, mock.call)
+                )
+            ),
         })
 
     EVENTS = [
