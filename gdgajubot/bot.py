@@ -284,7 +284,7 @@ class GDGAjuBot:
         # without message, it restarts the function for each chat state!
         if not message:
             if len(self.states['daily_book']) > 0:
-                new_message = functools.partial(telegram.Message, 0, self.bot.get_me(), datetime.datetime.now())
+                new_message = functools.partial(telegram.Message, 0, self.get_me(), datetime.datetime.now())
                 for chat_id, state in self.states['daily_book'].items():
                     self.ensure_daily_book(new_message(self.bot.get_chat(chat_id)), as_job=True)
             return
@@ -565,13 +565,20 @@ class GDGAjuBot:
         logging.info("%s: %s", message.from_user.name, "python")
         self.bot.send_message(message.chat.id, "import antigravity")
 
+    def get_me(self):
+        try:
+            return self.__get_me
+        except AttributeError:
+            self.__get_me = self.bot.get_me()
+            return self.__get_me
+
     def start(self):
         self.updater.start_polling(clean=True)
         logging.info("GDGAjuBot iniciado")
         logging.info("Este é o bot do %s", self.config.group_name)
         if self.config.debug_mode:
             logging.info("Modo do desenvolvedor ativado")
-            logging.info("Usando o bot %s", self.bot.get_me().name)
+            logging.info("Usando o bot %s", self.get_me().name)
             logging.info(
                 "Usando telegram_token=%s", self.config.telegram_token)
             logging.info(
