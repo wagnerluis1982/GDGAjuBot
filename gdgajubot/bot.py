@@ -281,7 +281,7 @@ class GDGAjuBot:
     @task(once=60)
     @on_message('.*')
     def ensure_daily_book(self, message=None, as_job=False):
-        # without message, it restarts the function for each chat state!
+        # without message, it dispatches the function for each chat state!
         if not message:
             if len(self.states['daily_book']) > 0:
                 new_message = functools.partial(telegram.Message, 0, self.get_me(), datetime.datetime.now())
@@ -290,26 +290,9 @@ class GDGAjuBot:
             return
 
         state = self.get_state('daily_book', message.chat_id)
-        my = state['__memory__']
+        schedule_job = self.__daily_book_scheduler(state, message)
 
-        schedule_job = my.get('schedule_fn')
-        if schedule_job is None:
-            cb = lambda bot, job, msg=message: self.ensure_daily_book(msg, as_job=True)
-
-            def schedule_job(seconds, to_log=True, job_callback=cb, chat_name=message.chat.username):
-                self.updater.job_queue.run_once(job_callback, when=seconds)
-                if to_log:
-                    logging.info("ensure_daily_book: %s scheduled to %d hours from now", chat_name, seconds // 3600)
-
-            my['schedule_fn'] = schedule_job
-
-            # there is no daily book job yet: schedule it now!
-            schedule_job(60, to_log=False)
-
-            # means this call was a dispatching
-            if as_job:
-                return
-
+        # when function isn't called as a job, only count the message.
         if not as_job:
             count = state.get('messages_since', 0)
             count += 1
@@ -318,6 +301,11 @@ class GDGAjuBot:
             logging.info("ensure_daily_book: %s count=%d last=%s", message.chat.username, count, state['last_time'])
 
             # the rest of the function is executed when called as a job
+            return
+
+        # when called as a job and is a dispatching, avoid duplicate
+        elif message.from_user == self.get_me() and 'first_call' not in state['__memory__']:
+            state['__memory__']['first_call'] = True
             return
 
         # that is first message coming from this chat_id: reschedule a job to 3 hours from now
@@ -365,6 +353,30 @@ class GDGAjuBot:
             else:
                 hours = passed.seconds // 3600
                 schedule_job(between(1, 24 - hours))  # reschedule a job to a fair time
+
+    def __daily_book_scheduler(self, state, message):
+        my = state['__memory__']
+
+        if 'schedule_fn' in my:
+            return my['schedule_fn']
+
+        with self.state_access['lock']:
+            if 'schedule_fn' in my:  # avoiding possibility of duplicated work
+                return my['schedule_fn']
+
+            cb = lambda bot, job, msg=message: self.ensure_daily_book(msg, as_job=True)
+
+            def schedule_job(seconds, to_log=True, job_callback=cb, chat_name=message.chat.username):
+                self.updater.job_queue.run_once(job_callback, when=seconds)
+                if to_log:
+                    logging.info("ensure_daily_book: %s scheduled to %d hours from now", chat_name, seconds // 3600)
+
+            my['schedule_fn'] = schedule_job
+
+            # there is no daily book job yet: schedule it now!
+            schedule_job(60, to_log=False)
+
+            return schedule_job
 
     @task(daily=datetime.time(0, 0))
     def clear_stale_states(self, as_task=True):
