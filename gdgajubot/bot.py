@@ -6,6 +6,7 @@ import itertools
 import logging
 import random
 import re
+import textwrap
 from collections import OrderedDict
 from threading import RLock
 
@@ -473,11 +474,12 @@ class GDGAjuBot:
             if delta < 0:
                 continue
 
+            summary = textwrap.shorten(book.summary, 150, placeholder=r' \[...]')
             response = (
                 "Confira o livro gratuito de hoje da Packt Publishing 🎁\n\n"
                 "📖 [%s](%s)\n"
                 "🔎 %s\n"
-            ) % (book.name, Resources.BOOK_URL, book.summary)
+            ) % (book.name, Resources.BOOK_URL, summary)
 
             for left in TIME_LEFT:
                 if delta <= left:
