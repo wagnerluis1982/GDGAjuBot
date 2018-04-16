@@ -179,11 +179,14 @@ class Resources:
 
     @orm.db_session
     def set_state(self, state_id: str, chat_id: int, chat_state: ChatState):
+        # to not dump memory-only state
+        chat_state = chat_state.copy()
+        chat_state.pop('__memory__', None)
+
         try:
             state = State[chat_id, state_id]
             info = json_decode(state.info)
             info.update(chat_state)
-            info.pop('__memory__', None)  # don't dump memory-only state
             state.info = json_encode(info)
         except orm.ObjectNotFound:
             State(telegram_id=chat_id, description=state_id, info=json_encode(chat_state))
