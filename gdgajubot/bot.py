@@ -330,27 +330,28 @@ class GDGAjuBot:
                 schedule_job(between(3, 12))  # reschedule a job to some hours from now
                 return
 
-            # used to send an aware message before the book
-            say = None
+            # flag to know if the book should be sent
+            should_send = False
 
             # we should send if
             if passed.days >= 1:  # has passed 1 day or more since last book was sent
-                say = "⛺ Faz um tempão que não pedem o livro do dia, que bom que estou aqui!"
+                should_send = True
             elif count >= 25:  # passed 25 messages and 12 hours or more
                 if passed.seconds >= 12 * 3600:
-                    say = "💂 Ei, faz um tempo que mandei o livro do dia. Vou fazer agora!"
+                    should_send = True
                 elif count >= 100:  # passed 100 messages and 6 hours or more
                     if passed.seconds >= 6 * 3600:
-                        say = "☕ Não percam o livro do dia!!!"
+                        should_send = True
                     elif count >= 300:  # passed 300 messages and 3 hours or more
-                        say = "🏇 Passou um monte de mensagens, será que todos viram o livro do dia?"
+                        should_send = True
 
             # book should be sent now
-            if say:
-                self.bot.send_message(message.chat_id, f'_{say}_', parse_mode="Markdown")
+            if should_send:
+                self.warn_auto_message(message.chat_id)
                 self.packtpub_free_learning(message, now, reply=False)
                 logging.info("ensure_daily_book: sent to %s", message.chat.username)
                 schedule_job(between(12, 24))  # reschedule a job to a bunch of hours from now
+            # or no sending at the moment
             else:
                 hours = passed.seconds // 3600
                 schedule_job(between(1, 24 - hours))  # reschedule a job to a fair time
@@ -420,6 +421,9 @@ class GDGAjuBot:
             states = super().__getattribute__('states')  # get states without changing access status
             self.resources.update_states(states)
             access['count'] = 0
+
+    def warn_auto_message(self, chat_id):
+        self.bot.send_message(chat_id, '_👾 Mensagem automática do seu bot favorito._', parse_mode="Markdown")
 
     # used to keep track of self.states access
     def __getattribute__(self, name):
