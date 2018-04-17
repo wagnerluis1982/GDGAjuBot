@@ -220,6 +220,10 @@ class Resources:
         return states
 
     def __state_dict(self, state_id, chat_id, data):
+        # reserve a memory-only key
+        if '__memory__' not in data:
+            data['__memory__'] = {}
+
         return StateDict(
             data, dump_function=lambda state: self.set_state(state_id, chat_id, state)
         )
