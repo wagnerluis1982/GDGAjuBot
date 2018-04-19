@@ -160,7 +160,7 @@ def extract_command(text):
 def do_not_spam(func):
     @functools.wraps(func)
     def func_wrapper(*args, **kwargs):
-        if random.randint(0,100) < 30:
+        if random.randint(0,100) < 10:
             return func(*args, **kwargs)
     return func_wrapper
 
