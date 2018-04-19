@@ -423,7 +423,11 @@ class GDGAjuBot:
             access['count'] = 0
 
     def warn_auto_message(self, chat_id):
-        self.bot.send_message(chat_id, '_👾 Mensagem automática do seu bot favorito._', parse_mode="Markdown")
+        text = random.choice((
+            '_👾 Mensagem automática do seu bot favorito._',
+            '_🤖 Mensagem automática do amigão_ [{me.name}](tg://user?id={me.id})'.format(me=self.get_me()),
+        ))
+        self.bot.send_message(chat_id, text, parse_mode="Markdown")
 
     # used to keep track of self.states access
     def __getattribute__(self, name):
