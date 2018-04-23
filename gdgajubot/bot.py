@@ -330,20 +330,12 @@ class GDGAjuBot:
                 schedule_job(between(3, 12))  # reschedule a job to some hours from now
                 return
 
-            # flag to know if the book should be sent
-            should_send = False
-
-            # we should send if
-            if passed.days >= 1:  # has passed 1 day or more since last book was sent
-                should_send = True
-            elif count >= 25:  # passed 25 messages and 12 hours or more
-                if passed.seconds >= 12 * 3600:
-                    should_send = True
-                elif count >= 100:  # passed 100 messages and 6 hours or more
-                    if passed.seconds >= 6 * 3600:
-                        should_send = True
-                    elif count >= 300:  # passed 300 messages and 3 hours or more
-                        should_send = True
+            should_send = (                                     # we should send if
+                passed.days >= 1                                # has passed 1 day or more since last book was sent
+                or count >= 25 and passed.seconds >= 12 * 3600  # passed 25 messages and 12 hours or more
+                or count >= 100 and passed.seconds >= 6 * 3600  # passed 100 messages and 6 hours or more
+                or count >= 300                                 # passed 300 messages and 3 hours or more
+            )
 
             # book should be sent now
             if should_send:
