@@ -16,8 +16,7 @@ from telegram.ext.filters import BaseFilter, Filters
 from telegram.ext.messagehandler import MessageHandler
 
 from gdgajubot.data.resources import Resources
-from gdgajubot.util import do_not_spam
-from gdgajubot import util
+from gdgajubot.util import do_not_spam, extract_command, HandlerHelper, AJU_TZ
 
 
 class FilterSearch(BaseFilter):
@@ -54,10 +53,10 @@ find_java = re.compile(r"(?i)\bJAVA\b").search
 find_python = re.compile(r"(?i)\bPYTHON\b").search
 
 # Helpers para definir os handlers do bot
-commands = util.HandlerHelper(use_options=True, force_options=False)
-easter_egg = util.HandlerHelper()
-on_message = util.HandlerHelper()
-task = util.HandlerHelper(use_options=True)
+commands = HandlerHelper(use_options=True, force_options=False)
+easter_egg = HandlerHelper()
+on_message = HandlerHelper()
+task = HandlerHelper(use_options=True)
 
 # Alias para reutilizar o cache como decorator
 cache = Resources.cache
@@ -277,7 +276,7 @@ class GDGAjuBot:
     @on_message('.*')
     def chat_statistics(self, message):
         stats = self.get_state('chat_stats', message.chat_id)
-        stats['last_activity'] = datetime.datetime.now(util.AJU_TZ)
+        stats['last_activity'] = datetime.datetime.now(AJU_TZ)
 
     @task(once=60)
     @on_message('.*')
@@ -311,14 +310,14 @@ class GDGAjuBot:
 
         # that is first message coming from this chat_id: reschedule a job to 3 hours from now
         if 'last_time' not in state:
-            state['last_time'] = datetime.datetime.now(tz=util.AJU_TZ)
+            state['last_time'] = datetime.datetime.now(tz=AJU_TZ)
             schedule_job(3 * 3600)
 
         # otherwise: make checks to send the book
         else:
             count = state['messages_since']
             last = state['last_time']
-            now = datetime.datetime.now(tz=util.AJU_TZ)
+            now = datetime.datetime.now(tz=AJU_TZ)
             passed = now - last
 
             # how many hours in an interval to check the book again
@@ -378,7 +377,7 @@ class GDGAjuBot:
             logging.info("Clearing stale chats states")
             self.dump_states()
 
-        now = datetime.datetime.now(util.AJU_TZ)
+        now = datetime.datetime.now(AJU_TZ)
         all_stats = self.states['chat_stats']
         staled_chats = set()
 
@@ -441,7 +440,7 @@ class GDGAjuBot:
             send_message = self.send_text_photo
 
         if now is None:
-            now = datetime.datetime.now(tz=util.AJU_TZ)
+            now = datetime.datetime.now(tz=AJU_TZ)
 
         book, response, left = self.__get_book(now)
         if left is not None:
@@ -469,7 +468,7 @@ class GDGAjuBot:
             if book is None:
                 continue
 
-            delta = datetime.datetime.fromtimestamp(book.expires, tz=util.AJU_TZ) - now
+            delta = datetime.datetime.fromtimestamp(book.expires, tz=AJU_TZ) - now
             delta = delta.total_seconds()
             if delta < 0:
                 continue
@@ -518,7 +517,7 @@ class GDGAjuBot:
         # a recent previous response to refer
         if message.chat.type in ["group", "supergroup"]:
             # Retrieve from cache and set if necessary
-            key = "p%s" % util.extract_command(text)
+            key = "p%s" % extract_command(text)
             previous_cache = Resources.cache.get_cache(key, expire=600)
             previous = previous_cache.get(key=message.chat.id, createfunc=dict)
 
