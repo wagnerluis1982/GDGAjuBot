@@ -13,12 +13,12 @@ O bot atende aos seguintes comandos:
 
 - `/start`: Mensagem de apresentação do bot.
 - `/help`: Mensagem de ajuda do bot.
-- `links`: Envia uma lista de links do grupo associado.
-- `dump_states`: (admin).
-- `about`: Exibe informações sobre o bot.
+- `/links`: Envia uma lista de links do grupo associado.
+- `/dump_states`: (admin).
+- `/about`: Exibe informações sobre o bot.
 - `/events`: listagem dos próximos eventos registrados no meetup.
 - `/book`: livro gratuito do dia da editora [Packt Publishing](https://www.packtpub.com/).
-- `list_users`: (admin) Lista todos os usuários.
+- `/list_users`: (admin) Lista todos os usuários.
 
 As seguintes funções estão disponíveis em `beta`:
 
