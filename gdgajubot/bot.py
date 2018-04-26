@@ -550,12 +550,11 @@ class GDGAjuBot:
         response += "Para saber mais ou contribuir: https://github.com/GDGAracaju/GDGAjuBot/"
         self.bot.send_message(message.chat.id, response)
 
-    @commands('/list_users')
+    @commands('/list_users', admin=True)
     def list_users(self, message):
-        if self.resources.is_user_admin(message.from_user.id):
-            users = self.resources.list_all_users()
-            response = '\n'.join([str(user) for user in users])
-            self.bot.send_message(message.chat.id, response)
+        users = self.resources.list_all_users()
+        response = '\n'.join([str(user) for user in users])
+        self.bot.send_message(message.chat.id, response)
 
     @easter_egg(find_ruby)
     def love_ruby(self, message):
