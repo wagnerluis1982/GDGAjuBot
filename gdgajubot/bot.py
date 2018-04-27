@@ -53,7 +53,7 @@ find_java = re.compile(r"(?i)\bJAVA\b").search
 find_python = re.compile(r"(?i)\bPYTHON\b").search
 
 # Helpers para definir os handlers do bot
-commands = HandlerHelper(use_options=True, force_options=False)
+command = HandlerHelper(use_options=True, force_options=False)
 easter_egg = HandlerHelper()
 on_message = HandlerHelper()
 task = HandlerHelper(use_options=True)
@@ -114,7 +114,7 @@ class GDGAjuBot:
 
         # Configura os comandos aceitos pelo bot
         dispatcher = self.updater.dispatcher
-        for k, func, options in commands.functions:
+        for k, func, options in command.functions:
             name = k[1:] if k[0] == '/' else k
             handler = CommandHandler(name, adapt_callback(func, self))
 
@@ -125,8 +125,8 @@ class GDGAjuBot:
 
         # Configura os comandos personalizados
         if self.config.custom_responses:
-            for command, response in self.config.custom_responses.items():
-                name = command.replace('/', '')
+            for cmd, response in self.config.custom_responses.items():
+                name = cmd.replace('/', '')
                 custom = functools.partial(
                     adapt_callback(self.custom_response_template),
                     command=name, response_text=response
@@ -192,7 +192,7 @@ class GDGAjuBot:
 
         return state
 
-    @commands('/start')
+    @command('/start')
     def send_welcome(self, message):
         """Mensagem de apresentação do bot."""
         logging.info("/start")
@@ -200,7 +200,7 @@ class GDGAjuBot:
             ', '.join(self.config.group_name))
         self.bot.reply_to(message, start_message)
 
-    @commands('/help')
+    @command('/help')
     def help(self, message):
         """Mensagem de ajuda do bot."""
         logging.info("/help")
@@ -218,7 +218,7 @@ class GDGAjuBot:
                 group_name=', '.join(self.config.group_name))
         )
 
-    @commands('/links')
+    @command('/links')
     def links(self, message):
         """Envia uma lista de links do grupo associado."""
         logging.info("/links")
@@ -236,7 +236,7 @@ class GDGAjuBot:
             message, response,
             parse_mode="Markdown", disable_web_page_preview=True)
 
-    @commands('/events')
+    @command('/events')
     def list_upcoming_events(self, message):
         """Retorna a lista de eventos do Meetup."""
         logging.info("%s: %s", message.from_user.name, "/events")
@@ -398,7 +398,7 @@ class GDGAjuBot:
             states.pop(chat_id, None)
 
     @task(each=600)
-    @commands('/dump_states', admin=True)
+    @command('/dump_states', admin=True)
     def dump_states(self, message=None):
         if message:
             self.bot.reply_to(message, "Despejo de memória acionado com sucesso")
@@ -430,7 +430,7 @@ class GDGAjuBot:
 
         return super().__getattribute__(name)
 
-    @commands('/book')
+    @command('/book')
     def packtpub_free_learning(self, message, now=None, reply=True):
         """Retorna o livro disponível no free-learning da editora PacktPub."""
         if reply:
@@ -542,14 +542,14 @@ class GDGAjuBot:
 
         return True
 
-    @commands('/about')
+    @command('/about')
     def about(self, message):
         logging.info("%s: %s", message.from_user.name, "/about")
         response = "Esse bot obtém informações de eventos do Meetup ou Facebook. "
         response += "Para saber mais ou contribuir: https://github.com/GDGAracaju/GDGAjuBot/"
         self.bot.send_message(message.chat.id, response)
 
-    @commands('/list_users', admin=True)
+    @command('/list_users', admin=True)
     def list_users(self, message):
         users = self.resources.list_all_users()
         response = '\n'.join([str(user) for user in users])
