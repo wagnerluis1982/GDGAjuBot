@@ -1,3 +1,5 @@
+import functools
+import random
 import re
 from collections import defaultdict
 
@@ -5,7 +7,16 @@ from telegram.ext import CommandHandler, MessageHandler, Filters
 
 from gdgajubot.util import BotDecorator, bot_callback
 
-__all__ = ('command', 'on_message')
+__all__ = ('do_not_spam', 'command', 'on_message')
+
+
+def do_not_spam(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        if random.randint(0, 100) < 10:
+            return func(*args, **kwargs)
+
+    return wrapper
 
 
 class command(BotDecorator):

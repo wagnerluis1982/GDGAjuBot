@@ -17,7 +17,7 @@ from telegram.ext.messagehandler import MessageHandler
 
 from .data.resources import Resources
 from .decorators import *
-from .util import do_not_spam, extract_command, HandlerHelper, AJU_TZ
+from .util import extract_command, HandlerHelper, AJU_TZ
 
 
 class FilterSearch(BaseFilter):

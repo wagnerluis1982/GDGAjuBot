@@ -158,14 +158,6 @@ def extract_command(text):
         return match.group(1).split()[0].split('@')[0]
 
 
-def do_not_spam(func):
-    @functools.wraps(func)
-    def func_wrapper(*args, **kwargs):
-        if random.randint(0,100) < 10:
-            return func(*args, **kwargs)
-    return func_wrapper
-
-
 class TimeZone:
     class TZ(datetime.tzinfo):
         ZERO = datetime.timedelta(0)
