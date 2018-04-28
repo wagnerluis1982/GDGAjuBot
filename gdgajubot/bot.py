@@ -15,8 +15,9 @@ from telegram.ext import CommandHandler, Updater
 from telegram.ext.filters import BaseFilter, Filters
 from telegram.ext.messagehandler import MessageHandler
 
-from gdgajubot.data.resources import Resources
-from gdgajubot.util import do_not_spam, extract_command, HandlerHelper, AJU_TZ
+from .data.resources import Resources
+from .decorators import *
+from .util import do_not_spam, extract_command, HandlerHelper, AJU_TZ
 
 
 class FilterSearch(BaseFilter):
@@ -53,7 +54,6 @@ find_java = re.compile(r"(?i)\bJAVA\b").search
 find_python = re.compile(r"(?i)\bPYTHON\b").search
 
 # Helpers para definir os handlers do bot
-command = HandlerHelper(use_options=True, force_options=False)
 easter_egg = HandlerHelper()
 on_message = HandlerHelper()
 task = HandlerHelper(use_options=True)
@@ -112,16 +112,10 @@ class GDGAjuBot:
                 reply_to_message_id=message.message_id, **kwargs
             )
 
-        # Configura os comandos aceitos pelo bot
         dispatcher = self.updater.dispatcher
-        for k, func, options in command.functions:
-            name = k[1:] if k[0] == '/' else k
-            handler = CommandHandler(name, adapt_callback(func, self))
 
-            if options.get('admin', False):
-                handler.filters = AdminFilter(name, self.resources)
-
-            dispatcher.add_handler(handler)
+        # Configura os comandos aceitos pelo bot
+        command.process(self)
 
         # Configura os comandos personalizados
         if self.config.custom_responses:
