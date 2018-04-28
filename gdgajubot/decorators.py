@@ -7,7 +7,7 @@ from telegram.ext import CommandHandler, MessageHandler, Filters
 
 from gdgajubot.util import BotDecorator, bot_callback
 
-__all__ = ('do_not_spam', 'command', 'on_message')
+__all__ = ('do_not_spam', 'command', 'on_message', 'easter_egg')
 
 
 def do_not_spam(func):
@@ -38,13 +38,18 @@ class command(BotDecorator):
 
 class on_message(BotDecorator):
     _arguments_ = 1
-    _keywords_ = 0
+    _keywords_ = (0, 1)
 
     _instances_ = defaultdict(dict)
 
     @classmethod
-    def do_process(cls, target, method, dispatcher, *args):
-        instance = cls._instances_[target]
+    def do_process(cls, target, method, dispatcher, *args, **kwargs):
+        to_spam = kwargs.get('to_spam', True)
+        instance = cls._instances_[target, to_spam]
+
+        if not to_spam:
+            method = do_not_spam(method)
+
         action = (re.compile(*args).search, method)
 
         try:
@@ -55,10 +60,17 @@ class on_message(BotDecorator):
         if 'sub_dispatcher' not in instance:
             instance['sub_dispatcher'] = True
 
+            must_do = cls._instances_[target, True]
+            no_spam = cls._instances_[target, False]
+
             def sub_dispatcher(_, update):
-                for search, func in instance['actions']:
+                for search, func in must_do.get('actions', ()):
                     if search(update.message.text):
                         func(update.message)
+                for search, func in no_spam.get('actions', ()):
+                    if search(update.message.text):
+                        func(update.message)
+                        return
 
             dispatcher.add_handler(
                 MessageHandler(
@@ -67,3 +79,6 @@ class on_message(BotDecorator):
                 ),
                 group=1,
             )
+
+
+easter_egg = functools.partial(on_message, to_spam=False)

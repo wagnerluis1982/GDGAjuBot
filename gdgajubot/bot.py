@@ -13,7 +13,6 @@ from threading import RLock
 import telegram
 from telegram.ext import CommandHandler, Updater
 from telegram.ext.filters import BaseFilter, Filters
-from telegram.ext.messagehandler import MessageHandler
 
 from .data.resources import Resources
 from .decorators import *
@@ -48,13 +47,7 @@ class AdminFilter(BaseFilter):
             return False
 
 
-# Funções de busca usadas nas easter eggs
-find_ruby = re.compile(r"(?i)\bRUBY\b").search
-find_java = re.compile(r"(?i)\bJAVA\b").search
-find_python = re.compile(r"(?i)\bPYTHON\b").search
-
 # Helpers para definir os handlers do bot
-easter_egg = HandlerHelper()
 task = HandlerHelper(use_options=True)
 
 # Alias para reutilizar o cache como decorator
@@ -127,11 +120,6 @@ class GDGAjuBot:
                 dispatcher.add_handler(
                     CommandHandler(name, custom)
                 )
-
-        # Configura as easter eggs
-        for search, func in easter_egg.functions:
-            dispatcher.add_handler(
-                MessageHandler(FilterSearch(search), adapt_callback(do_not_spam(func), self)))
 
         # Configura as funções que reagem a todas as mensagens de texto
         on_message.process(self)
@@ -532,7 +520,7 @@ class GDGAjuBot:
         response = '\n'.join([str(user) for user in users])
         self.bot.send_message(message.chat.id, response)
 
-    @easter_egg(find_ruby)
+    @easter_egg(r"(?i)\bRUBY\b")
     def love_ruby(self, message):
         """Easter Egg com o Ruby."""
         logging.info("%s: %s", message.from_user.name, "ruby")
@@ -542,13 +530,13 @@ class GDGAjuBot:
             "{} ama Ruby... ou Rails?".format(username),
         )
 
-    @easter_egg(find_java)
+    @easter_egg(r"(?i)\bJAVA\b")
     def memory_java(self, message):
         """Easter Egg com o Java."""
         logging.info("%s: %s", message.from_user.name, "java")
         self.bot.send_message(message.chat.id, "Ihh... acabou a RAM")
 
-    @easter_egg(find_python)
+    @easter_egg(r"(?i)\bPYTHON\b")
     def easter_python(self, message):
         """Easter Egg com o Python."""
         logging.info("%s: %s", message.from_user.name, "python")
