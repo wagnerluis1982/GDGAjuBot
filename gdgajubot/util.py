@@ -1,6 +1,7 @@
 import argparse
 import datetime
 import functools
+import inspect
 import os
 import random
 import re
@@ -284,3 +285,102 @@ class ArgumentParser(argparse.ArgumentParser):
             self.error("missing arguments: " + ", ".join(missing_args))
 
         return BotConfig(**config_dict)
+
+
+# Bot handler decorator internals
+
+def bot_callback(method):
+    return lambda bot, update: method(update.message)
+
+
+class BotDecorator:
+    _arguments_ = (0, ...)
+    _keywords_ = (0, ...)
+    _optional_args_ = True
+
+    _noargs_call = None
+
+    def __init__(self, *args, **kwargs):
+        self._args = args
+        self._kwargs = kwargs
+
+    def __call__(self, func):
+        try:
+            func.decorators
+        except AttributeError:
+            func.decorators = defaultdict(tuple)
+        func.decorators[self.__class__] += ((self._args, self._kwargs),)
+
+        return func
+
+    def __new__(cls, *args, **kwargs):
+        cls._validate(args)
+        cls._validate(kwargs)
+
+        if cls._optional_args_ and not kwargs and len(args) == 1 and callable(args[0]):
+            return cls._noargs_call(args[0])
+
+        decorator = super().__new__(cls)
+        decorator.__init__(*args, **kwargs)
+
+        return decorator
+
+    def __init_subclass__(cls):
+        for attr in '_arguments_', '_keywords_':
+            spec = getattr(cls, attr)
+            if spec is ...:
+                start, stop = 0, float('inf')
+            elif isinstance(spec, int):
+                start = stop = spec
+            else:
+                start, stop = spec
+
+                if stop is ...:
+                    stop = float('inf')
+                    valid = isinstance(start, int)
+                else:
+                    valid = isinstance(start, int) and isinstance(stop, int)
+
+                if not valid or not (0 <= start <= stop):
+                    raise TypeError("Attribute %r must have a format such as (a, b) and 0 <= a <= b" % attr)
+
+            setattr(cls, attr, (start, stop))
+
+        if cls._optional_args_:
+            cls._optional_args_ = cls._arguments_[0] == 0 and cls._keywords_[0] == 0
+
+        if cls._optional_args_:
+            cls._noargs_call = super().__new__(cls).__call__
+
+    @classmethod
+    def _validate(cls, args_or_kwargs):
+        if isinstance(args_or_kwargs, dict):
+            kind, (start, stop) = '**kwargs', cls._keywords_
+        else:
+            kind, (start, stop) = '*args', cls._arguments_
+
+        length = len(args_or_kwargs)
+        if length < start:
+            raise ValueError("This decorator must have at least %d %s: got %d" % (start, kind, length))
+        if length > stop:
+            raise ValueError("This decorator accepts up to %d %s: got %d" % (start, kind, length))
+
+    @classmethod
+    def is_decorated(cls, func):
+        try:
+            return inspect.ismethod(func) and cls in func.decorators
+        except AttributeError:
+            return False
+
+    @classmethod
+    def process(cls, target):
+        from gdgajubot.bot import GDGAjuBot
+        assert isinstance(target, GDGAjuBot)
+
+        for (_, method) in inspect.getmembers(target, cls.is_decorated):
+            for args, kwargs in method.decorators[cls]:
+                cls.do_process(target, method, target.updater.dispatcher, *args, **kwargs)
+
+    @classmethod
+    def do_process(cls, target, method, dispatcher, *args, **kwargs):
+        raise NotImplementedError
