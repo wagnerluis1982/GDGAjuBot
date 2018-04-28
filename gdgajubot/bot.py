@@ -55,7 +55,6 @@ find_python = re.compile(r"(?i)\bPYTHON\b").search
 
 # Helpers para definir os handlers do bot
 easter_egg = HandlerHelper()
-on_message = HandlerHelper()
 task = HandlerHelper(use_options=True)
 
 # Alias para reutilizar o cache como decorator
@@ -135,23 +134,7 @@ class GDGAjuBot:
                 MessageHandler(FilterSearch(search), adapt_callback(do_not_spam(func), self)))
 
         # Configura as funções que reagem a todas as mensagens de texto
-        if on_message.functions:
-            def adapt_search(xs):
-                pattern, function = xs
-                return re.compile(pattern).search, function
-
-            def sub_dispatcher(_, update, *, actions=list(map(adapt_search, on_message.functions))):
-                for search, function in actions:
-                    if search(update.message.text):
-                        function(self, update.message)
-
-            dispatcher.add_handler(
-                MessageHandler(
-                    filters=Filters.text,
-                    callback=sub_dispatcher,
-                ),
-                group=1,
-            )
+        on_message.process(self)
 
         # Configura as tasks
         def job_callback(func):
