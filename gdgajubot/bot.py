@@ -16,7 +16,7 @@ from telegram.ext.filters import BaseFilter, Filters
 
 from .data.resources import Resources
 from .decorators import *
-from .util import extract_command, HandlerHelper, AJU_TZ
+from .util import extract_command, AJU_TZ
 
 
 class FilterSearch(BaseFilter):
@@ -46,9 +46,6 @@ class AdminFilter(BaseFilter):
             message.reply_text("Você não é meu mestre para me dar ordens 😤", quote=True)
             return False
 
-
-# Helpers para definir os handlers do bot
-task = HandlerHelper(use_options=True)
 
 # Alias para reutilizar o cache como decorator
 cache = Resources.cache
@@ -125,23 +122,7 @@ class GDGAjuBot:
         on_message.process(self)
 
         # Configura as tasks
-        def job_callback(func):
-            return lambda bot, job: func(self)
-
-        jq = self.updater.job_queue
-        for func, options in task.functions:
-            # repeating task
-            if 'each' in options:
-                options['interval'] = options.pop('each')
-                jq.run_repeating(job_callback(func), **options)
-            # one time task
-            elif 'once' in options:
-                options['when'] = options.pop('once')
-                jq.run_once(job_callback(func), **options)
-            # daily task
-            else:
-                options['time'] = options.pop('daily')
-                jq.run_daily(job_callback(func), **options)
+        task.process(self)
 
     def custom_response_template(
         self, message, *args, command='', response_text=''

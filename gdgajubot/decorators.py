@@ -7,7 +7,7 @@ from telegram.ext import CommandHandler, MessageHandler, Filters
 
 from gdgajubot.util import BotDecorator, bot_callback
 
-__all__ = ('do_not_spam', 'command', 'on_message', 'easter_egg')
+__all__ = ('do_not_spam', 'command', 'on_message', 'task', 'easter_egg')
 
 
 def do_not_spam(func):
@@ -82,3 +82,32 @@ class on_message(BotDecorator):
 
 
 easter_egg = functools.partial(on_message, to_spam=False)
+
+
+class task(BotDecorator):
+    _arguments_ = 0
+    _keywords_ = 1
+
+    @classmethod
+    def do_process(cls, target, method, dispatcher, **kwargs):
+
+        scheduler = target.updater.job_queue
+        # repeating task
+        if 'each' in kwargs:
+            kwargs['interval'] = kwargs.pop('each')
+            scheduler.run_repeating(cls.job_callback(method), **kwargs)
+        # one time task
+        elif 'once' in kwargs:
+            kwargs['when'] = kwargs.pop('once')
+            scheduler.run_once(cls.job_callback(method), **kwargs)
+        # daily task
+        elif 'daily' in kwargs:
+            kwargs['time'] = kwargs.pop('daily')
+            scheduler.run_daily(cls.job_callback(method), **kwargs)
+        # error
+        else:
+            raise ValueError("Use @task with either 'interval', 'once', or 'daily' keyword argument")
+
+    @staticmethod
+    def job_callback(method):
+        return lambda bot, job: method()
