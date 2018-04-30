@@ -12,20 +12,11 @@ from threading import RLock
 
 import telegram
 from telegram.ext import CommandHandler, Updater
-from telegram.ext.filters import BaseFilter, Filters
-from telegram.ext.messagehandler import MessageHandler
+from telegram.ext.filters import BaseFilter
 
-from gdgajubot.data.resources import Resources
-from gdgajubot.util import do_not_spam
-from gdgajubot import util
-
-
-class FilterSearch(BaseFilter):
-    def __init__(self, f):
-        self.f = f
-
-    def filter(self, message):
-        return Filters.text(message) and self.f(message.text)
+from .data.resources import Resources
+from .decorators import *
+from .util import extract_command, AJU_TZ
 
 
 class AdminFilter(BaseFilter):
@@ -47,17 +38,6 @@ class AdminFilter(BaseFilter):
             message.reply_text("Você não é meu mestre para me dar ordens 😤", quote=True)
             return False
 
-
-# Funções de busca usadas nas easter eggs
-find_ruby = re.compile(r"(?i)\bRUBY\b").search
-find_java = re.compile(r"(?i)\bJAVA\b").search
-find_python = re.compile(r"(?i)\bPYTHON\b").search
-
-# Helpers para definir os handlers do bot
-commands = util.HandlerHelper(use_options=True, force_options=False)
-easter_egg = util.HandlerHelper()
-on_message = util.HandlerHelper()
-task = util.HandlerHelper(use_options=True)
 
 # Alias para reutilizar o cache como decorator
 cache = Resources.cache
@@ -113,21 +93,15 @@ class GDGAjuBot:
                 reply_to_message_id=message.message_id, **kwargs
             )
 
-        # Configura os comandos aceitos pelo bot
         dispatcher = self.updater.dispatcher
-        for k, func, options in commands.functions:
-            name = k[1:] if k[0] == '/' else k
-            handler = CommandHandler(name, adapt_callback(func, self))
 
-            if options.get('admin', False):
-                handler.filters = AdminFilter(name, self.resources)
-
-            dispatcher.add_handler(handler)
+        # Configura os comandos aceitos pelo bot
+        command.process(self)
 
         # Configura os comandos personalizados
         if self.config.custom_responses:
-            for command, response in self.config.custom_responses.items():
-                name = command.replace('/', '')
+            for cmd, response in self.config.custom_responses.items():
+                name = cmd.replace('/', '')
                 custom = functools.partial(
                     adapt_callback(self.custom_response_template),
                     command=name, response_text=response
@@ -136,48 +110,11 @@ class GDGAjuBot:
                     CommandHandler(name, custom)
                 )
 
-        # Configura as easter eggs
-        for search, func in easter_egg.functions:
-            dispatcher.add_handler(
-                MessageHandler(FilterSearch(search), adapt_callback(do_not_spam(func), self)))
-
         # Configura as funções que reagem a todas as mensagens de texto
-        if on_message.functions:
-            def adapt_search(xs):
-                pattern, function = xs
-                return re.compile(pattern).search, function
-
-            def sub_dispatcher(_, update, *, actions=list(map(adapt_search, on_message.functions))):
-                for search, function in actions:
-                    if search(update.message.text):
-                        function(self, update.message)
-
-            dispatcher.add_handler(
-                MessageHandler(
-                    filters=Filters.text,
-                    callback=sub_dispatcher,
-                ),
-                group=1,
-            )
+        on_message.process(self)
 
         # Configura as tasks
-        def job_callback(func):
-            return lambda bot, job: func(self)
-
-        jq = self.updater.job_queue
-        for func, options in task.functions:
-            # repeating task
-            if 'each' in options:
-                options['interval'] = options.pop('each')
-                jq.run_repeating(job_callback(func), **options)
-            # one time task
-            elif 'once' in options:
-                options['when'] = options.pop('once')
-                jq.run_once(job_callback(func), **options)
-            # daily task
-            else:
-                options['time'] = options.pop('daily')
-                jq.run_daily(job_callback(func), **options)
+        task.process(self)
 
     def custom_response_template(
         self, message, *args, command='', response_text=''
@@ -193,7 +130,7 @@ class GDGAjuBot:
 
         return state
 
-    @commands('/start')
+    @command('/start')
     def send_welcome(self, message):
         """Mensagem de apresentação do bot."""
         logging.info("/start")
@@ -201,7 +138,7 @@ class GDGAjuBot:
             ', '.join(self.config.group_name))
         self.bot.reply_to(message, start_message)
 
-    @commands('/help')
+    @command('/help')
     def help(self, message):
         """Mensagem de ajuda do bot."""
         logging.info("/help")
@@ -219,7 +156,7 @@ class GDGAjuBot:
                 group_name=', '.join(self.config.group_name))
         )
 
-    @commands('/links')
+    @command('/links')
     def links(self, message):
         """Envia uma lista de links do grupo associado."""
         logging.info("/links")
@@ -237,7 +174,7 @@ class GDGAjuBot:
             message, response,
             parse_mode="Markdown", disable_web_page_preview=True)
 
-    @commands('/events')
+    @command('/events')
     def list_upcoming_events(self, message):
         """Retorna a lista de eventos do Meetup."""
         logging.info("%s: %s", message.from_user.name, "/events")
@@ -277,7 +214,7 @@ class GDGAjuBot:
     @on_message('.*')
     def chat_statistics(self, message):
         stats = self.get_state('chat_stats', message.chat_id)
-        stats['last_activity'] = datetime.datetime.now(util.AJU_TZ)
+        stats['last_activity'] = datetime.datetime.now(AJU_TZ)
 
     @task(once=60)
     @on_message('.*')
@@ -311,14 +248,14 @@ class GDGAjuBot:
 
         # that is first message coming from this chat_id: reschedule a job to 3 hours from now
         if 'last_time' not in state:
-            state['last_time'] = datetime.datetime.now(tz=util.AJU_TZ)
+            state['last_time'] = datetime.datetime.now(tz=AJU_TZ)
             schedule_job(3 * 3600)
 
         # otherwise: make checks to send the book
         else:
             count = state['messages_since']
             last = state['last_time']
-            now = datetime.datetime.now(tz=util.AJU_TZ)
+            now = datetime.datetime.now(tz=AJU_TZ)
             passed = now - last
 
             # how many hours in an interval to check the book again
@@ -378,7 +315,7 @@ class GDGAjuBot:
             logging.info("Clearing stale chats states")
             self.dump_states()
 
-        now = datetime.datetime.now(util.AJU_TZ)
+        now = datetime.datetime.now(AJU_TZ)
         all_stats = self.states['chat_stats']
         staled_chats = set()
 
@@ -399,7 +336,7 @@ class GDGAjuBot:
             states.pop(chat_id, None)
 
     @task(each=600)
-    @commands('/dump_states', admin=True)
+    @command('/dump_states', admin=True)
     def dump_states(self, message=None):
         if message:
             self.bot.reply_to(message, "Despejo de memória acionado com sucesso")
@@ -431,7 +368,7 @@ class GDGAjuBot:
 
         return super().__getattribute__(name)
 
-    @commands('/book')
+    @command('/book')
     def packtpub_free_learning(self, message, now=None, reply=True):
         """Retorna o livro disponível no free-learning da editora PacktPub."""
         if reply:
@@ -441,7 +378,7 @@ class GDGAjuBot:
             send_message = self.send_text_photo
 
         if now is None:
-            now = datetime.datetime.now(tz=util.AJU_TZ)
+            now = datetime.datetime.now(tz=AJU_TZ)
 
         book, response, left = self.__get_book(now)
         if left is not None:
@@ -469,7 +406,7 @@ class GDGAjuBot:
             if book is None:
                 continue
 
-            delta = datetime.datetime.fromtimestamp(book.expires, tz=util.AJU_TZ) - now
+            delta = datetime.datetime.fromtimestamp(book.expires, tz=AJU_TZ) - now
             delta = delta.total_seconds()
             if delta < 0:
                 continue
@@ -518,7 +455,7 @@ class GDGAjuBot:
         # a recent previous response to refer
         if message.chat.type in ["group", "supergroup"]:
             # Retrieve from cache and set if necessary
-            key = "p%s" % util.extract_command(text)
+            key = "p%s" % extract_command(text)
             previous_cache = Resources.cache.get_cache(key, expire=600)
             previous = previous_cache.get(key=message.chat.id, createfunc=dict)
 
@@ -543,20 +480,20 @@ class GDGAjuBot:
 
         return True
 
-    @commands('/about')
+    @command('/about')
     def about(self, message):
         logging.info("%s: %s", message.from_user.name, "/about")
         response = "Esse bot obtém informações de eventos do Meetup ou Facebook. "
         response += "Para saber mais ou contribuir: https://github.com/GDGAracaju/GDGAjuBot/"
         self.bot.send_message(message.chat.id, response)
 
-    @commands('/list_users', admin=True)
+    @command('/list_users', admin=True)
     def list_users(self, message):
         users = self.resources.list_all_users()
         response = '\n'.join([str(user) for user in users])
         self.bot.send_message(message.chat.id, response)
 
-    @easter_egg(find_ruby)
+    @easter_egg(r"(?i)\bRUBY\b")
     def love_ruby(self, message):
         """Easter Egg com o Ruby."""
         logging.info("%s: %s", message.from_user.name, "ruby")
@@ -566,13 +503,13 @@ class GDGAjuBot:
             "{} ama Ruby... ou Rails?".format(username),
         )
 
-    @easter_egg(find_java)
+    @easter_egg(r"(?i)\bJAVA\b")
     def memory_java(self, message):
         """Easter Egg com o Java."""
         logging.info("%s: %s", message.from_user.name, "java")
         self.bot.send_message(message.chat.id, "Ihh... acabou a RAM")
 
-    @easter_egg(find_python)
+    @easter_egg(r"(?i)\bPYTHON\b")
     def easter_python(self, message):
         """Easter Egg com o Python."""
         logging.info("%s: %s", message.from_user.name, "python")

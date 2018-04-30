@@ -71,26 +71,6 @@ class MockResources(mock.NonCallableMock):
 class TestGDGAjuBot(unittest.TestCase):
     config = util.BotConfig(group_name='Test-Bot')
 
-    # Regular expressions tests
-
-    def test_find_ruby(self):
-        assert bot.find_ruby("Olá ruby GDG")
-        assert bot.find_ruby("Olá RUBY GDG")
-        assert bot.find_ruby("Olá Ruby GDG")
-        assert not bot.find_ruby("OlárubyGDG")
-
-    def test_find_java(self):
-        assert bot.find_java("Olá java GDG")
-        assert bot.find_java("Olá Java GDG")
-        assert bot.find_java("Olá JAVA GDG")
-        assert not bot.find_java("OlájavaGDG")
-
-    def test_find_python(self):
-        assert bot.find_python("Olá python GDG")
-        assert bot.find_python("Olá Python GDG")
-        assert bot.find_python("Olá PYTHON GDG")
-        assert not bot.find_python("OlápythonGDG")
-
     # Bot commands tests
 
     def test_send_welcome(self):

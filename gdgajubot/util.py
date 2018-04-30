@@ -1,13 +1,11 @@
 import argparse
 import datetime
-import functools
+import inspect
 import os
-import random
 import re
 from collections import defaultdict
 
 import requests
-import threading
 from urllib import parse
 import yaml
 
@@ -102,43 +100,6 @@ class BotConfig:
             raise Exception('There was an error parsing the database_url configuration.')
 
 
-class HandlerHelper:
-    def __init__(self, use_options=False, force_options=True):
-        self.use_options = use_options
-        self.force_options = force_options
-        self.functions = []
-
-    def __call__(self, *names, **options):
-        """Decorator para anotar funções para usar como handlers do bot"""
-        assert not self.use_options or not self.force_options or options, "Expecting keyword arguments, but none set"
-
-        def decorator(func):
-            @functools.wraps(func)
-            def wrapped(*args, **kwargs):
-                return func(*args, **kwargs)
-
-            if self.functions:
-                last = self.functions[-1]
-                if names:
-                    assert callable(last[1]), "This decorator should be called with *args"
-                elif self.use_options:
-                    assert callable(last[0]), "This decorator should be called with **kwargs"
-                else:
-                    assert callable(last), "This decorator should be called with no arguments"
-
-            if names:
-                for name in names:
-                    self.functions += [(name, func, options)] if self.use_options else [(name, func)]
-            elif self.use_options:
-                self.functions += [(func, options)]
-            else:
-                self.functions += [func]
-
-            return wrapped
-
-        return decorator
-
-
 def match_command(text):
     """Verifica se o texto passado representa um comando
 
@@ -155,14 +116,6 @@ def extract_command(text):
     match = match_command(text)
     if match:
         return match.group(1).split()[0].split('@')[0]
-
-
-def do_not_spam(func):
-    @functools.wraps(func)
-    def func_wrapper(*args, **kwargs):
-        if random.randint(0,100) < 10:
-            return func(*args, **kwargs)
-    return func_wrapper
 
 
 class TimeZone:
@@ -197,26 +150,6 @@ class TimeZone:
 
 # aliases úteis
 AJU_TZ = TimeZone.gmt(-3)
-
-
-class Atomic:
-    def __init__(self, value=None):
-        self._value = value
-        self._lock = threading.RLock()
-
-    def set(self, value, on_diff=False):
-        with self._lock:
-            if on_diff:
-                if value == self._value:
-                    return False
-            self._value = value
-            return True
-
-    def get(self, on_none_f=None):
-        with self._lock:
-            if self._value is None:
-                self.set(on_none_f())
-            return self._value
 
 
 class MissingDict(defaultdict):
@@ -284,3 +217,102 @@ class ArgumentParser(argparse.ArgumentParser):
             self.error("missing arguments: " + ", ".join(missing_args))
 
         return BotConfig(**config_dict)
+
+
+# Bot handler decorator internals
+
+def bot_callback(method):
+    return lambda bot, update: method(update.message)
+
+
+class BotDecorator:
+    _arguments_ = (0, ...)
+    _keywords_ = (0, ...)
+    _optional_args_ = True
+
+    _noargs_call = None
+
+    def __init__(self, *args, **kwargs):
+        self._args = args
+        self._kwargs = kwargs
+
+    def __call__(self, func):
+        try:
+            func.decorators
+        except AttributeError:
+            func.decorators = defaultdict(tuple)
+        func.decorators[self.__class__] += ((self._args, self._kwargs),)
+
+        return func
+
+    def __new__(cls, *args, **kwargs):
+        cls._validate(args)
+        cls._validate(kwargs)
+
+        if cls._optional_args_ and not kwargs and len(args) == 1 and callable(args[0]):
+            return cls._noargs_call(args[0])
+
+        decorator = super().__new__(cls)
+        decorator.__init__(*args, **kwargs)
+
+        return decorator
+
+    def __init_subclass__(cls):
+        for attr in '_arguments_', '_keywords_':
+            spec = getattr(cls, attr)
+            if spec is ...:
+                start, stop = 0, float('inf')
+            elif isinstance(spec, int):
+                start = stop = spec
+            else:
+                start, stop = spec
+
+                if stop is ...:
+                    stop = float('inf')
+                    valid = isinstance(start, int)
+                else:
+                    valid = isinstance(start, int) and isinstance(stop, int)
+
+                if not valid or not (0 <= start <= stop):
+                    raise TypeError("Attribute %r must have a format such as (a, b) and 0 <= a <= b" % attr)
+
+            setattr(cls, attr, (start, stop))
+
+        if cls._optional_args_:
+            cls._optional_args_ = cls._arguments_[0] == 0 and cls._keywords_[0] == 0
+
+        if cls._optional_args_:
+            cls._noargs_call = super().__new__(cls).__call__
+
+    @classmethod
+    def _validate(cls, args_or_kwargs):
+        if isinstance(args_or_kwargs, dict):
+            kind, (start, stop) = '**kwargs', cls._keywords_
+        else:
+            kind, (start, stop) = '*args', cls._arguments_
+
+        length = len(args_or_kwargs)
+        if length < start:
+            raise ValueError("This decorator must have at least %d %s: got %d" % (start, kind, length))
+        if length > stop:
+            raise ValueError("This decorator accepts up to %d %s: got %d" % (start, kind, length))
+
+    @classmethod
+    def is_decorated(cls, func):
+        try:
+            return inspect.ismethod(func) and cls in func.decorators
+        except AttributeError:
+            return False
+
+    @classmethod
+    def process(cls, target):
+        from gdgajubot.bot import GDGAjuBot
+        assert isinstance(target, GDGAjuBot)
+
+        for (_, method) in inspect.getmembers(target, cls.is_decorated):
+            for args, kwargs in method.decorators[cls]:
+                cls.do_process(target, method, target.updater.dispatcher, *args, **kwargs)
+
+    @classmethod
+    def do_process(cls, target, method, dispatcher, *args, **kwargs):
+        raise NotImplementedError
