@@ -1,14 +1,11 @@
 import argparse
 import datetime
-import functools
 import inspect
 import os
-import random
 import re
 from collections import defaultdict
 
 import requests
-import threading
 from urllib import parse
 import yaml
 
@@ -103,43 +100,6 @@ class BotConfig:
             raise Exception('There was an error parsing the database_url configuration.')
 
 
-class HandlerHelper:
-    def __init__(self, use_options=False, force_options=True):
-        self.use_options = use_options
-        self.force_options = force_options
-        self.functions = []
-
-    def __call__(self, *names, **options):
-        """Decorator para anotar funções para usar como handlers do bot"""
-        assert not self.use_options or not self.force_options or options, "Expecting keyword arguments, but none set"
-
-        def decorator(func):
-            @functools.wraps(func)
-            def wrapped(*args, **kwargs):
-                return func(*args, **kwargs)
-
-            if self.functions:
-                last = self.functions[-1]
-                if names:
-                    assert callable(last[1]), "This decorator should be called with *args"
-                elif self.use_options:
-                    assert callable(last[0]), "This decorator should be called with **kwargs"
-                else:
-                    assert callable(last), "This decorator should be called with no arguments"
-
-            if names:
-                for name in names:
-                    self.functions += [(name, func, options)] if self.use_options else [(name, func)]
-            elif self.use_options:
-                self.functions += [(func, options)]
-            else:
-                self.functions += [func]
-
-            return wrapped
-
-        return decorator
-
-
 def match_command(text):
     """Verifica se o texto passado representa um comando
 
@@ -190,26 +150,6 @@ class TimeZone:
 
 # aliases úteis
 AJU_TZ = TimeZone.gmt(-3)
-
-
-class Atomic:
-    def __init__(self, value=None):
-        self._value = value
-        self._lock = threading.RLock()
-
-    def set(self, value, on_diff=False):
-        with self._lock:
-            if on_diff:
-                if value == self._value:
-                    return False
-            self._value = value
-            return True
-
-    def get(self, on_none_f=None):
-        with self._lock:
-            if self._value is None:
-                self.set(on_none_f())
-            return self._value
 
 
 class MissingDict(defaultdict):

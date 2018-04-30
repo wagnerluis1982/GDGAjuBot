@@ -12,19 +12,11 @@ from threading import RLock
 
 import telegram
 from telegram.ext import CommandHandler, Updater
-from telegram.ext.filters import BaseFilter, Filters
+from telegram.ext.filters import BaseFilter
 
 from .data.resources import Resources
 from .decorators import *
 from .util import extract_command, AJU_TZ
-
-
-class FilterSearch(BaseFilter):
-    def __init__(self, f):
-        self.f = f
-
-    def filter(self, message):
-        return Filters.text(message) and self.f(message.text)
 
 
 class AdminFilter(BaseFilter):
