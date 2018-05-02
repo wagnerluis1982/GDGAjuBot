@@ -47,10 +47,11 @@ class on_message(BotDecorator):
         to_spam = kwargs.get('to_spam', True)
         instance = cls._instances_[target, to_spam]
 
+        search = re.compile(*args).search
         if not to_spam:
-            method = do_not_spam(method)
+            search = do_not_spam(search)
 
-        action = (re.compile(*args).search, method)
+        action = (search, method)
 
         try:
             instance['actions'] += (action,)
