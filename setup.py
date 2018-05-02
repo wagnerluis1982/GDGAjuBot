@@ -8,7 +8,7 @@ with open('requirements.txt') as requirements_file:
 
 setup(
     name="gdgajubot",
-    version="1.5",
+    version="1.6.1",
     author="GDG Aracaju",
     url="http://site.gdgaracaju.com.br/",
     description="GDG Aracaju Bot",
