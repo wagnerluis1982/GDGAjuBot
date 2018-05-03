@@ -236,7 +236,7 @@ class GDGAjuBot:
             count += 1
             state['messages_since'] = count
 
-            logging.info("ensure_daily_book: %s count=%d last=%s", message.chat.username, count, state['last_time'])
+            logging.info("ensure_daily_book: %s count=%d last=%s", message.chat.username, count, state.get('last_time'))
 
             # the rest of the function is executed when called as a job
             return
