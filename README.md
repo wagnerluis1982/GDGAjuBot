@@ -48,9 +48,11 @@ O `gdgajubot` precisa no mínimo do Python 3.6.
 
 No momento da instalação, as dependências mínimas listadas no arquivo `setup.py` serão baixadas
 automaticamente. Para desenvolver o `gdgajubot`, recomendamos a instalação das dependências listadas
-no arquivo `requirements.txt` via:
+no arquivo `Pipfile` via:
 
-    $ pip install -r requirements.txt
+    $ pipenv install
+
+Para isso, é necessário ter o `pipenv` instalado.
 
 ## Modo de uso
 
