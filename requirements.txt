@@ -1,8 +1,0 @@
-Beaker==1.9.1
-beautifulsoup4==4.6.0
-dj-database-url==0.5.0
-psycopg2-binary==2.7.4
-pony==0.7.3
-python-telegram-bot==10.0.1
-PyYAML==3.12
-requests==2.18.4
