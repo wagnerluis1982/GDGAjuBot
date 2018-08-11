@@ -358,7 +358,7 @@ class GDGAjuBot:
         ))
         self.bot.send_message(chat_id, random_text(), parse_mode="Markdown")
 
-    # used to keep track of self.states access
+    # used to keep track of self.states access and know what states must be dumped in `dump_states` task
     def __getattribute__(self, name):
         access = super().__getattribute__('state_access')
 
@@ -373,31 +373,37 @@ class GDGAjuBot:
         """Retorna o livro disponível no free-learning da editora PacktPub."""
         if reply:
             logging.info("%s: %s", message.from_user.name, "/book")
-            send_message = self._send_smart_reply
+            send_message_fn = self._send_smart_reply
         else:
-            send_message = self.send_text_photo
+            send_message_fn = self.send_text_photo
+
+        def send_message(*args, **kwargs):
+            has_sent = send_message_fn(*args, **kwargs)
+
+            if has_sent:
+                state = self.get_state('daily_book', message.chat_id)
+                state['last_time'] = now
+                state['messages_since'] = 0
+                state.dump()
 
         if now is None:
             now = datetime.datetime.now(tz=AJU_TZ)
 
+        # obtém o livro do dia, a resposta formatada e quanto tempo falta para acabar a oferta
         book, response, left = self.__get_book(now)
-        if left is not None:
+
+        # adiciona à resposta uma frase de que a oferta está acabando
+        if left >= 0:
             warning = "⌛️ Menos de %s!" % TIME_LEFT[left]
             response += warning
 
         cover = book['cover'] if book else None
 
-        has_sent = send_message(
+        send_message(
             message, response,
             parse_mode="Markdown", disable_web_page_preview=True,
             picture=cover
         )
-
-        if has_sent:
-            state = self.get_state('daily_book', message.chat_id)
-            state['last_time'] = now
-            state['messages_since'] = 0
-            state.dump()
 
     def __get_book(self, now):
         # Faz duas tentativas para obter o livro do dia, por questões de possível cache antigo.
@@ -422,7 +428,7 @@ class GDGAjuBot:
                 if delta <= left:
                     return book, response, left
             else:
-                left = None
+                left = -1
 
             break
 
@@ -432,7 +438,7 @@ class GDGAjuBot:
             book = None
             response = "Parece que não tem um livro grátis hoje 😡\n\n" \
                        "Se acha que é um erro meu, veja com seus próprios olhos em " + Resources.BOOK_URL
-            left = None
+            left = -1
 
         return book, response, left
 
