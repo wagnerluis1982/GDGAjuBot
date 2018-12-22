@@ -139,6 +139,11 @@ class Resources:
         try:
             book['name'] = dealoftheday.select_one(
                 'div:nth-of-type(2) h2').text.strip()
+
+            # Avoid to continue when there is no book name
+            if not book['name']:
+                return None
+
             book['summary'] = dealoftheday.select_one(
                 'div:nth-of-type(3)').text.strip()
             book['expires'] = int(dealoftheday.select_one(
