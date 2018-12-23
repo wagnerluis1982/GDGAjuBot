@@ -225,6 +225,10 @@ def bot_callback(method):
     return lambda bot, update: method(update.message)
 
 
+def bot_callback_with_args(method):
+    return lambda bot, update, args: method(update.message, args)
+
+
 class BotDecorator:
     _arguments_ = (0, ...)
     _keywords_ = (0, ...)

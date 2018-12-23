@@ -5,7 +5,7 @@ from collections import defaultdict
 
 from telegram.ext import CommandHandler, MessageHandler, Filters
 
-from gdgajubot.util import BotDecorator, bot_callback
+from gdgajubot.util import BotDecorator, bot_callback, bot_callback_with_args
 
 __all__ = ('do_not_spam', 'command', 'on_message', 'task', 'easter_egg')
 
@@ -21,16 +21,20 @@ def do_not_spam(func):
 
 class command(BotDecorator):
     _arguments_ = (1, ...)
-    _keywords_ = (0, 1)
+    _keywords_ = (0, 2)
 
     @classmethod
     def do_process(cls, target, method, dispatcher, *args, **kwargs):
         names = [(k[1:] if k[0] == '/' else k)
                  for k in args]
-        handler = CommandHandler(names, bot_callback(method))
 
-        from gdgajubot.bot import AdminFilter
+        if kwargs.get('pass_args'):
+            handler = CommandHandler(names, bot_callback_with_args(method), pass_args=True)
+        else:
+            handler = CommandHandler(names, bot_callback(method))
+
         if kwargs.get('admin', False):
+            from gdgajubot.bot import AdminFilter
             handler.filters = AdminFilter(names[0], target.resources)
 
         dispatcher.add_handler(handler)
