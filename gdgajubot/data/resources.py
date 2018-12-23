@@ -11,7 +11,7 @@ from beaker.util import parse_cache_config_options
 from bs4 import BeautifulSoup
 
 from gdgajubot import util
-from gdgajubot.data.database import db, orm, Message, User, Choice, ChoiceConverter, State
+from gdgajubot.data.database import db, orm, Message, User, Choice, ChoiceConverter, State, Group
 from gdgajubot.util import StateDict, MissingDict
 
 
@@ -232,6 +232,28 @@ class Resources:
         return StateDict(
             data, dump_function=lambda state: self.set_state(state_id, chat_id, state)
         )
+
+    @cache.cache('db.get_group', expire=600)
+    @orm.db_session
+    def get_group(self, group_id: int, group_name: str) -> Group:
+        return self.__get_group(group_id, group_name)
+
+    def __get_group(self, group_id, group_name):
+        try:
+            return Group[group_id]
+        except orm.ObjectNotFound:
+            return Group(telegram_id=group_id, telegram_groupname=group_name)
+
+    @orm.db_session
+    def set_group(self, group_id: int, group_name: str, **kwargs):
+        if not kwargs:
+            return
+
+        group = self.__get_group(group_id, group_name)
+        for k, v in kwargs.items():
+            setattr(group, k, v)
+
+        self.cache.invalidate(self.get_group, "db.get_group")
 
     @orm.db_session
     def log_message(self, message, *args, **kwargs):

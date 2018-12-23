@@ -227,6 +227,11 @@ class GDGAjuBot:
                     self.ensure_daily_book(new_message(self.bot.get_chat(chat_id)), as_job=True)
             return
 
+        group = self.resources.get_group(message.chat_id, message.chat.username)
+        if not group.has_daily_book:
+            logging.warning("ensure_daily_book: disabled for @%s", message.chat.username)
+            return
+
         state = self.get_state('daily_book', message.chat_id)
         schedule_job = self.__daily_book_scheduler(state, message)
 
@@ -367,6 +372,18 @@ class GDGAjuBot:
                 access['count'] += 1
 
         return super().__getattribute__(name)
+
+    @command('/daily_book', pass_args=True, admin=True)
+    def daily_book_management(self, message, args):
+        if len(args) != 1 or args[0] not in ('enabled', 'disabled'):
+            message.reply_text('Modo de usar inválido!\n\n'
+                               'Digite `/daily_book enabled|disabled` para ativar/desativar o livro diário automático',
+                               quote=True, parse_mode='Markdown')
+
+        new_status = args[0] == 'enabled'
+        self.resources.set_group(message.chat_id, message.chat.username, has_daily_book=new_status)
+
+        message.reply_text('Livro diário automático ' + ('ativado' if new_status else 'desativado'), quote=True)
 
     @command('/book')
     def packtpub_free_learning(self, message, now=None, reply=True):

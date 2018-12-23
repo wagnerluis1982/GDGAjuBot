@@ -87,6 +87,7 @@ class Message(db.Entity):
 class Group(db.Entity):
     telegram_id = orm.PrimaryKey(int, size=64)
     telegram_groupname = orm.Optional(str)
+    has_daily_book = orm.Optional(bool, default=False)
 
     def __str__(self):
         return 'Group - {}'.format(self.telegram_groupname)
