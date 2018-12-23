@@ -227,6 +227,11 @@ class GDGAjuBot:
                     self.ensure_daily_book(new_message(self.bot.get_chat(chat_id)), as_job=True)
             return
 
+        group = self.resources.get_group(message.chat_id, message.chat.username)
+        if not group.has_daily_book:
+            logging.warning("ensure_daily_book: disabled for @%s", message.chat.username)
+            return
+
         state = self.get_state('daily_book', message.chat_id)
         schedule_job = self.__daily_book_scheduler(state, message)
 
