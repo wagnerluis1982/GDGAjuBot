@@ -376,7 +376,7 @@ class GDGAjuBot:
     @command('/daily_book', pass_args=True, admin=True)
     def daily_book_management(self, message, args):
         usage = '<i>Modo de uso:</i>\n' \
-                '/daily_book enabled|disabled - ativar/desativar o livro diário automático'
+                '/daily_book on|off - ativar/desativar o livro diário automático'
 
         def friendly_status(status, help=False):
             adverb = 'ativado' if status else 'desativado'
@@ -387,11 +387,11 @@ class GDGAjuBot:
             group = self.resources.get_group(message.chat_id, message.chat.username)
             message.reply_html(friendly_status(group.has_daily_book, help=True), quote=True)
 
-        elif args[0].lower() not in ('enabled', 'disabled'):
+        elif args[0].lower() not in ('on', 'off'):
             message.reply_html('Argumento <code>%s</code> inválido!!!\n\n%s' % (args[0], usage), quote=True)
 
         else:
-            new_status = args[0] == 'enabled'
+            new_status = args[0] == 'on'
             self.resources.set_group(message.chat_id, message.chat.username, has_daily_book=new_status)
             message.reply_html(friendly_status(new_status), quote=True)
 
