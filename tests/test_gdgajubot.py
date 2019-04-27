@@ -217,16 +217,3 @@ class TestGDGAjuBot(unittest.TestCase):
                                             reply_to_message_id=82)
         the_answer = bot.send_message.call_args[0][1]
         assert the_answer[2:] in ALREADY_ANSWERED_TEXTS
-
-
-class TestResources(unittest.TestCase):
-    cd = os.path.dirname(__file__)
-
-    def test_extract_packt_free_book(self):
-        content = open(os.path.join(self.cd, 'packtpub-free-learning.html.fixture'), 'rb')
-        result = {'name': "Oracle Enterprise Manager 12c Administration Cookbook",
-                  'summary': "Over 50 practical recipes to install, configure, and monitor your Oracle setup using Oracle Enterprise Manager",
-                  'cover': "https://d1ldz4te4covpm.cloudfront.net/sites/default/files/imagecache/dotd_main_image/7409EN.jpg",
-                  'expires': 1459378800}
-
-        assert bot.Resources.extract_packt_free_book(content) == result
