@@ -149,6 +149,7 @@ class TimeZone:
 
 
 # aliases úteis
+UTC_TZ = TimeZone.gmt(0)
 AJU_TZ = TimeZone.gmt(-3)
 
 
