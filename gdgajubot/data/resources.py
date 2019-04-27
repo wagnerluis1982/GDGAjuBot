@@ -117,48 +117,30 @@ class Resources:
 
     @cache.cache('get_packt_free_book', expire=600)
     def get_packt_free_book(self):
-        r = requests.get(self.BOOK_URL, headers=self.HEADERS)
-        return self.extract_packt_free_book(r.content, r.encoding)
+        date_from = datetime.datetime.utcnow().date()
+        date_to = date_from + datetime.timedelta(days=1)
 
-    @staticmethod
-    def extract_packt_free_book(content, encoding='utf-8'):
-        if hasattr(content, 'read'):    # file-type
-            content = content.read()
-        if isinstance(content, bytes):  # convert to str
-            content = content.decode(encoding)
+        # Primeira requisição obtém o ID do livro do dia
+        r = requests.get(
+            url="https://services.packtpub.com/free-learning-v1/offers",
+            params={
+                "dateFrom": date_from.strftime("%Y-%m-%dT00:00:00.000Z"),
+                "dateTo": date_to.strftime("%Y-%m-%dT00:00:00.000Z")
+            },
+        )
+        book_id = r.json()['data'][0]['productId']
 
-        # Extracting information with html parser
-        page = BeautifulSoup(content, 'html.parser')
-        dealoftheday = page.select_one(
-            '#deal-of-the-day div div div:nth-of-type(2)')
-
-        if not dealoftheday:
-            return None
+        # Segunda requisição obtém as informações do livro do dia
+        r = requests.get(url="https://static.packt-cdn.com/products/%s/summary" % book_id)
+        data = r.json()
 
         book = util.AttributeDict()
-        try:
-            book['name'] = dealoftheday.select_one(
-                'div:nth-of-type(2) h2').text.strip()
+        book['name'] = data['title']
+        book['summary'] = data['oneLiner']
+        book['cover'] = data['coverImage']
+        book['expires'] = datetime.datetime.combine(date_to, datetime.time.min).replace(tzinfo=util.UTC_TZ).timestamp()
 
-            # Avoid to continue when there is no book name
-            if not book['name']:
-                return None
-
-            book['summary'] = dealoftheday.select_one(
-                'div:nth-of-type(3)').text.strip()
-            book['expires'] = int(dealoftheday.select_one(
-                'span.packt-js-countdown').attrs['data-countdown-to']
-            )
-            image_source = page.select_one(
-                '#deal-of-the-day > div > div > '
-                'div.dotd-main-book-image.float-left > a > img'
-            ).attrs.get('data-original', None)
-            if image_source and image_source.startswith('//'):
-                image_source = 'https:{0}'.format(image_source)
-            book['cover'] = image_source
-            return book
-        except:
-            return None
+        return book
 
     @cache.cache('get_short_url')
     def get_short_url(self, long_url):
