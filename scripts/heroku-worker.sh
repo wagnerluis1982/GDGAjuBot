@@ -1,3 +1,2 @@
 #!/bin/bash
-pip install --no-deps --upgrade . &&
-    gdgajubot --no-dev
+python -m gdgajubot --no-dev
