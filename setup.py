@@ -21,7 +21,7 @@ requirements = (
 
 setup(
     name="gdgajubot",
-    version="1.6.1",
+    version="1.7.0",
     author="GDG Aracaju",
     url="http://gdgaracaju.com.br/",
     description="GDG Aracaju Bot",

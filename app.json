@@ -5,6 +5,7 @@
   "logo": "https://node-js-sample.herokuapp.com/node.png",
   "keywords": ["telegram", "bot", "meetup"],
   "image": "heroku/python",
+  "stack": "heroku-18",
   "env": {
     "TELEGRAM_TOKEN": {
       "description": "Token da API para bots do Telegram."
