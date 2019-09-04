@@ -154,7 +154,7 @@ class TestGDGAjuBot(unittest.TestCase):
 
     def _assert_help_message(self, bot, message):
         self._assert_mockbot(bot)
-        commands = ('/help', '/book', '/events', '/about')
+        commands = ('/help', '/udemy','/book', '/events', '/about')
         response = bot.reply_to.call_args[0][1]
         for command in commands:
             assert command in response

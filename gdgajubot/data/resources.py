@@ -3,6 +3,8 @@ import json
 import logging
 from typing import Dict
 
+import threading
+
 import requests
 import requests.exceptions
 
@@ -114,6 +116,91 @@ class Resources:
             all_events.extend(events)
 
         return sorted(all_events, key=lambda x: x['time'])
+
+def get_discounts(self):
+        ''' 
+        discountsglobal pode bloquear as requisições 
+        Comentar linha caso aconteça
+        '''
+        # lista de funções de coleta
+        site_functions = [
+                self.__get_all_onlinetutorials_links,
+                self.__get_all_discountsglobal_links, 
+                self.__get_all_learnviral_links,
+        ]
+
+        # dict que irá receber os resultados das threads
+        self.__coupon_results = {} 
+
+        thread_list = []
+        for f in site_functions:
+            thread = threading.Thread(target=f)
+            thread.start()
+            thread_list.append(thread)
+        [thread.join() for thread in thread_list]
+
+        # remove cupons iguais e que não possuem desconto
+        coupons_dict = {}
+        for url,name in self.__coupon_results.items():
+            if 'https://www.udemy.com/course/' and \
+                '?couponCode=' not in url: # não possui desconto
+                continue
+            coupons_dict[url.strip()] = name.strip()
+        del self.__coupon_results 
+
+        return coupons_dict
+
+    # função de coleta 1
+    def __get_all_discountsglobal_links(self): 
+        url = "http://udemycoupon.discountsglobal.com/coupon-category/free-2/"
+        try:
+            r = requests.get(url,headers=self.HEADERS)
+            soup = BeautifulSoup(r.text,'html5lib')
+            for div in soup.findAll('div',{'class':'item-panel'}):
+                name = div.find('h3').find('a').text 
+                name = name.replace('Discount: 100% off – ','')
+                name = name.replace('Discount: 75% off – ','')
+                name = name.replace('100% off ','')
+                url = div.find('div',{'class':'link-holder'}).find('a').get('href') 
+                self.__coupon_results.update({url:name})
+        except Exception as e:
+            print('get_all_discountsglobal_links',e)      
+
+    # função de coleta 2
+    def __get_all_learnviral_links(self): 
+        url = "https://udemycoupon.learnviral.com/coupon-category/free100-discount/"
+        try:
+            r = requests.get(url,headers=self.HEADERS)
+            soup = BeautifulSoup(r.text,'html5lib')
+            titles = [
+                title.text.replace('[Free]','') for title in \
+                soup.findAll('h3',{'class':'entry-title'})
+            ]
+            urls = [
+                a.get('href') for a in \
+                soup.findAll('a',{'class':'coupon-code-link btn promotion'})
+            ]
+            self.__coupon_results.update({url:name for (url,name) in zip(urls,titles)})
+        except Exception as e:
+            print('get_all_learnviral_links',e)      
+
+    # função de coleta 3
+    def __get_all_onlinetutorials_links(self): 
+        url = "https://onlinetutorials.org"
+        try:
+            r = requests.get(url,headers=self.HEADERS)
+            soup = BeautifulSoup(r.text,'html5lib')
+            titles = [
+                title.find('a').text for title in \
+                soup.findAll('h3',{'class':'entry-title'})
+            ]
+            urls = [
+                a.get('href') for a in \
+                soup.findAll('a',{'class':'coupon-code-link button promotion'})
+            ]
+            self.__coupon_results.update({url:name for (url,name) in zip(urls,titles)})
+        except Exception as e:
+            print('get_all_onlinetutorials_links',e)  
 
     @cache.cache('get_packt_free_book', expire=600)
     def get_packt_free_book(self):

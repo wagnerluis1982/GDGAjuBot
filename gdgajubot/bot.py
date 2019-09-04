@@ -9,7 +9,6 @@ import re
 import textwrap
 from collections import OrderedDict
 from threading import RLock
-import coupon_utils
 
 import telegram
 from telegram.ext import CommandHandler, Updater
@@ -410,9 +409,9 @@ class GDGAjuBot:
             now = datetime.datetime.now(tz=AJU_TZ)
 
         response = ''
-        for i,(url,name) in enumerate(coupon_utils.get_discounts().items()):
+        for i,(url,name) in enumerate(self.resources.get_discounts().items()):
             response += '{}- Nome: {}\n'.format(i+1,name)
-            response += 'Url: {}\n\n'.format(url)   
+            response += 'URL: {}\n\n'.format(url)   
             
         send_message(
             message, response,
