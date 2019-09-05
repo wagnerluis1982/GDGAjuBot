@@ -144,7 +144,8 @@ class GDGAjuBot:
         logging.info("/help")
         help_message = "/help - Exibe essa mensagem.\n" \
             "/about - Sobre o bot e como contribuir.\n" \
-            "/book - Informa o ebook gratuito do dia na Packt Publishing.\n"
+            "/book - Informa o ebook gratuito do dia na Packt Publishing.\n" \
+            "/udemy - Informa cupons 100% off da Udemy.\n"
         if len(self.config.group_name) > 1:
             help_message += "/events - Informa a lista de próximos eventos dos grupos: {group_name}."
         else:
@@ -394,7 +395,29 @@ class GDGAjuBot:
             new_status = args[0] == 'on'
             self.resources.set_group(message.chat_id, message.chat.username, has_daily_book=new_status)
             message.reply_html(friendly_status(new_status), quote=True)
+   
+    @command('/udemy')
+    def udemy_coupon_discounts(self, message, now=None, reply=True):
+        """Retorna cupons de desconto da Udemy."""
+        if reply:
+            logging.info("%s: %s", message.from_user.name, "/udemy")
+            send_message = self._send_smart_reply
+        else:
+            send_message = self.send_text_photo
+            
+        if now is None:
+            now = datetime.datetime.now(tz=AJU_TZ)
 
+        response = ''
+        for i,(url,name) in enumerate(self.resources.get_discounts().items()):
+            response += '{}- Nome: {}\n'.format(i+1,name)
+            response += 'URL: {}\n\n'.format(url)   
+            
+        send_message(
+            message, response,
+            parse_mode="Markdown", disable_web_page_preview=True,
+        )
+            
     @command('/book')
     def packtpub_free_learning(self, message, now=None, reply=True):
         """Retorna o livro disponível no free-learning da editora PacktPub."""
