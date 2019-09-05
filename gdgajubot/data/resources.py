@@ -117,7 +117,7 @@ class Resources:
 
         return sorted(all_events, key=lambda x: x['time'])
 
-def get_discounts(self):
+    def get_discounts(self):
         ''' 
         discountsglobal pode bloquear as requisições 
         Comentar linha caso aconteça
