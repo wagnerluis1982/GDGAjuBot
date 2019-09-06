@@ -1,4 +1,4 @@
-import datetime
+﻿import datetime
 import json
 import logging
 from typing import Dict
@@ -156,7 +156,7 @@ class Resources:
         try:
             r = requests.get(url,headers=self.HEADERS)
             soup = BeautifulSoup(r.text,'html5lib')
-            for div in soup.findAll('div',{'class':'item-panel'}):
+            for div in soup.findAll('div',{'class':'item-panel'})[:7]:
                 name = div.find('h3').find('a').text 
                 name = name.replace('Discount: 100% off – ','')
                 name = name.replace('Discount: 75% off – ','')
@@ -180,7 +180,7 @@ class Resources:
                 a.get('href') for a in \
                 soup.findAll('a',{'class':'coupon-code-link btn promotion'})
             ]
-            self.__coupon_results.update({url:name for (url,name) in zip(urls,titles)})
+            self.__coupon_results.update({url:name for (url,name) in zip(urls[:7],titles[:7])})
         except Exception as e:
             print('get_all_learnviral_links',e)      
 
@@ -198,7 +198,7 @@ class Resources:
                 a.get('href') for a in \
                 soup.findAll('a',{'class':'coupon-code-link button promotion'})
             ]
-            self.__coupon_results.update({url:name for (url,name) in zip(urls,titles)})
+            self.__coupon_results.update({url:name for (url,name) in zip(urls[:7],titles[:7])})
         except Exception as e:
             print('get_all_onlinetutorials_links',e)  
 

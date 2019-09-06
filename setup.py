@@ -4,6 +4,7 @@ import codecs
 from setuptools import setup
 
 requirements = (
+    'html5lib==1.0.1',
     'beaker==1.9.1',
     'beautifulsoup4==4.6.0',
     'certifi==2018.4.16',
