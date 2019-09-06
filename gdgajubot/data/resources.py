@@ -117,7 +117,7 @@ class Resources:
 
         return sorted(all_events, key=lambda x: x['time'])
 
-    @cache.cache('get_discounts', expire=600)
+    @cache.cache('get_discounts', expire=7200)
     def get_discounts(self):
         ''' 
         discountsglobal pode bloquear as requisições 

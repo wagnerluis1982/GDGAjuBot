@@ -408,14 +408,14 @@ class GDGAjuBot:
         if now is None:
             now = datetime.datetime.now(tz=AJU_TZ)
 
-        discounts = self.resources.get_discounts().items()
         response = ''
-        for i,(url,name) in enumerate(discounts):
+        for i,(url,name) in enumerate(self.resources.get_discounts().items()):
             response += '{}- Nome: {}\n'.format(i+1,name)
             response += 'URL: {}\n\n'.format(url)   
+        
         send_message(
-        message, response,
-        parse_mode="Markdown", disable_web_page_preview=True,
+            message, response,
+            parse_mode="Markdown", disable_web_page_preview=True,
         )
         
     @command('/book')
