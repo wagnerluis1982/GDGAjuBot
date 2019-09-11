@@ -414,8 +414,7 @@ class GDGAjuBot:
             response += 'URL: {}\n\n'.format(url)   
         
         send_message(
-            message, response,
-            parse_mode="Markdown", disable_web_page_preview=True,
+            message, response, disable_web_page_preview=True,
         )
         
     @command('/book')
