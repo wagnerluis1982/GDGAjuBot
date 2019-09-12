@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """Bot do GDG-Aracaju."""
 import datetime
 import functools
@@ -412,12 +412,11 @@ class GDGAjuBot:
         for i,(url,name) in enumerate(self.resources.get_discounts().items()):
             response += '{}- Nome: {}\n'.format(i+1,name)
             response += 'URL: {}\n\n'.format(url)   
-            
+        
         send_message(
-            message, response,
-            parse_mode="Markdown", disable_web_page_preview=True,
+            message, response, disable_web_page_preview=True,
         )
-            
+        
     @command('/book')
     def packtpub_free_learning(self, message, now=None, reply=True):
         """Retorna o livro disponível no free-learning da editora PacktPub."""
